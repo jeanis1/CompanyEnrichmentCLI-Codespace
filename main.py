@@ -1,6 +1,7 @@
 import argparse 
 
-from clients.abstract_api import get_company_by_domain
+from services.company_enrichment import enrich_company
+from services.scoring_icp import score_company
 
 parser = argparse.ArgumentParser(
     description="Enrich a company using its domain."
@@ -12,10 +13,12 @@ parser.add_argument("domain",
 
 args = parser.parse_args()
 
+company = enrich_company(args.domain)
 
-print(f"Domain: {args.domain}")
+print("\n--- Normalized Company ---")
+print(company.model_dump_json(indent=2))
 
-company_data = get_company_by_domain(
-    args.domain, 
-    inspect_response=True,
-)
+icp_score = score_company(company)
+
+print("\n---ICP Score ---")
+print(icp_score.model_dump_json(indent=2))

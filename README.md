@@ -12,27 +12,15 @@ Company Enrichment CLI that
 -includes tests
 
 # Data Flow
-domain
-   ↓
-CLI
-   ↓
-API client
-   ↓
-raw JSON
-   ↓
-Pydantic model
-   ↓
-ICP scorer
-   ↓
-save result
+domain -> CLI -> API client -> raw JSON -> Pydantic model -> ICP scorer -> save result
 
 # Development Order
-1. CLI accepts domain
-2. HTTP request works
-3. Inspect API JSON
-4. Pydantic Company model
+1. CLI accepts domain (Complete)
+2. HTTP request works (Complete)
+3. Inspect API JSON   (Complete)
+4. Pydantic Company model [In Progress]
 5. Convert API response → Company
-6. ICP scoring function
+6. ICP score modeling function
 7. Save JSON/SQLite/Postgres
 8. Handle API/network errors
 9. Add retries/backoff
