@@ -10,7 +10,7 @@ def score_company(company: Company) -> ICPScore:
 
     #Employee fit
     if company.employee_count is not None:
-        if 50 <= company.employee_count >= 1000:
+        if company.employee_count >= 1000:
             employee_score = 30
 
     #Industry fit

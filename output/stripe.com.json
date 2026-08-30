@@ -1,0 +1,27 @@
+{
+  "company": {
+    "name": "Stripe",
+    "domain": "stripe.com",
+    "industry": "Internet",
+    "employee_count": 3037,
+    "annual_revenue": null,
+    "year_founded": 2010,
+    "location": {
+      "city": "San Francisco",
+      "state": null,
+      "country": "United States"
+    },
+    "company_type": null,
+    "description": null,
+    "linkedin_url": "linkedin.com/company/stripe",
+    "enrichment_source": "abstract_api"
+  },
+  "icp_score": {
+    "score": 80,
+    "employee_score": 30,
+    "industry_score": 30,
+    "geography_score": 20,
+    "revenue_score": 0,
+    "is_qualified": true
+  }
+}

@@ -16,7 +16,7 @@ def enrich_company(domain: str) -> Company:
         year_founded=raw.get("year_founded"),
 
         company_type=raw.get("type"),
-        deedescription=raw.get("description"),
+        description=raw.get("description"),
 
         linkedin_url=raw.get("linkedin_url"),
 
