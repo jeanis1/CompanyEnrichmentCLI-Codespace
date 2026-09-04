@@ -13,7 +13,7 @@ def test_qualified_company_gets_full_score(qualified_company):
 
 def test_company_with_no_matching_criteria_gets_zero():
     company = Company(
-        company = "Small Company",
+        name = "Small Company",
         domain = "smallcompany.com",
         industry= "Retail",
         employee_count=10,

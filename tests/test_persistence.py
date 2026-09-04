@@ -1,0 +1,69 @@
+import csv 
+import json
+
+from services import persistence
+
+def test_save_results_json(
+        tmp_path,
+        monkeypatch,
+        qualified_company,
+        qualified_score
+):
+    monkeypatch.setattr(
+        persistence, 
+        "OUTPUT_DIR",
+        tmp_path,
+    )
+
+    persistence.save_results_json(
+        qualified_company,
+        qualified_score,
+        "test.json",
+    )
+
+    path = tmp_path / "test.json"
+
+    assert path.exists()
+
+    with path.open(encoding="utf-8") as file: 
+        data = json.load(file)
+
+    assert data["company"]["name"] == "OpenAI"
+    assert data["company"]["domain"] == "openai.com"
+    assert data["icp_score"]["score"] == 100
+    assert data["icp_score"]["is_qualified"] is True
+
+def test_save_results_csv(
+        tmp_path,
+        monkeypatch,
+        qualified_company,
+        qualified_score,
+):
+    monkeypatch.setattr(
+        persistence,
+        "OUTPUT_DIR",
+        tmp_path,
+    )
+
+    persistence.save_results_csv(
+        qualified_company, 
+        qualified_score,
+        "test.csv",
+    )
+
+    path = tmp_path / "test.csv"
+
+    assert path.exists()
+
+    with path.open(encoding="utf-8") as file:
+        rows = list(csv.DictReader(file))
+
+    assert len(rows) == 1
+
+    row = rows[0]
+
+    assert row["name"] == "OpenAI"
+    assert row["domain"] == "openai.com"
+    assert row["country"] == "United States"
+    assert row["icp_score"] == "100"
+

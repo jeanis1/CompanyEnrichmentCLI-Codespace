@@ -24,7 +24,7 @@ def qualified_company() -> Company:
 def qualified_score() -> ICPScore:
     return ICPScore(
         score=100, 
-        employee_score_score=30,
+        employee_score=30,
         industry_score=30,
         geography_score=20, 
         revenue_score=20,

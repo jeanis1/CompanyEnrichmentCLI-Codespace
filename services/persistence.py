@@ -40,7 +40,7 @@ def save_results_csv(
         "year_founded": company.year_founded,
         "city": company.location.city,
         "state": company.location.state,
-        "country": company.location.city,
+        "country": company.location.country,
         "company_type": company.company_type,
         "description": company.description,
         "linkedin_url": company.linkedin_url,
