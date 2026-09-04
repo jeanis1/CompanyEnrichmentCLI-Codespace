@@ -32,7 +32,7 @@ def score_company(company: Company) -> ICPScore:
     #Revenue fit
     if (
         company.annual_revenue is not None
-        and company.annual_revenue >= 10_000_000
+        and company.annual_revenue <= 10_000_000
     ):
         revenue_score = 20
 

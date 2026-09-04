@@ -14,7 +14,7 @@ Company Enrichment CLI that<br>
 # Data Flow
 domain -> CLI -> API client -> raw JSON -> Pydantic model -> ICP scorer -> save result
 
-# Development Order
+# Development Tasks
 1. CLI accepts domain ✅<br>
 2. HTTP request works ✅<br>
 3. Inspect API JSON   ✅<br>
