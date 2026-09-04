@@ -1,31 +1,21 @@
-import csv 
+import csv
 import json
 
 from services import persistence
 
-def test_save_results_json(
-        tmp_path,
-        monkeypatch,
-        qualified_company,
-        qualified_score
-):
-    monkeypatch.setattr(
-        persistence, 
-        "OUTPUT_DIR",
-        tmp_path,
-    )
 
-    persistence.save_results_json(
+def test_save_results_json(tmp_path, qualified_company, qualified_score):
+    path = persistence.save_results_json(
         qualified_company,
         qualified_score,
         "test.json",
+        output_dir=tmp_path,
     )
 
-    path = tmp_path / "test.json"
-
+    assert path == tmp_path / "test.json"
     assert path.exists()
 
-    with path.open(encoding="utf-8") as file: 
+    with path.open(encoding="utf-8") as file:
         data = json.load(file)
 
     assert data["company"]["name"] == "OpenAI"
@@ -33,26 +23,16 @@ def test_save_results_json(
     assert data["icp_score"]["score"] == 100
     assert data["icp_score"]["is_qualified"] is True
 
-def test_save_results_csv(
-        tmp_path,
-        monkeypatch,
+
+def test_save_results_csv(tmp_path, qualified_company, qualified_score):
+    path = persistence.save_results_csv(
         qualified_company,
         qualified_score,
-):
-    monkeypatch.setattr(
-        persistence,
-        "OUTPUT_DIR",
-        tmp_path,
-    )
-
-    persistence.save_results_csv(
-        qualified_company, 
-        qualified_score,
         "test.csv",
+        output_dir=tmp_path,
     )
 
-    path = tmp_path / "test.csv"
-
+    assert path == tmp_path / "test.csv"
     assert path.exists()
 
     with path.open(encoding="utf-8") as file:
@@ -61,9 +41,7 @@ def test_save_results_csv(
     assert len(rows) == 1
 
     row = rows[0]
-
     assert row["name"] == "OpenAI"
     assert row["domain"] == "openai.com"
     assert row["country"] == "United States"
     assert row["icp_score"] == "100"
-
