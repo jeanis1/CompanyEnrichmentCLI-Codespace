@@ -1,39 +1,61 @@
 import argparse 
+import sys
+from functools import partial
 
+from clients.abstract_api import AbstractAPIError, get_company_by_domain
+from config import Settings
 from services.company_enrichment import enrich_company
-from services.scoring_icp import score_company
 from services.persistence import save_results_json, save_results_csv
+from services.scoring_icp import score_company
 
 
-parser = argparse.ArgumentParser(
-    description="Enrich a company using its domain."
-)
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description="Enrich. a company using its domain"
+    )
 
-parser.add_argument("domain",
-                     help="Domain to process, e.g. example.com"
-)
+    parser.add_argument(
+        "domain",
+        help="Domain to process, e.g. example.com",
+    )
 
-args = parser.parse_args()
+    return parser.parse_args()
 
-company = enrich_company(args.domain)
+def main() -> int:
+    args = parse_args()
+    settings = Settings.from_env()
 
-print("\n--- Normalized Company ---")
-print(company.model_dump_json(indent=2))
+    fetch_company = partial( 
+        get_company_by_domain,
+        api_key=settings.abstract_api_key,
+    )
 
-icp_score = score_company(company)
+    try:
+        company = enrich_company(
+            args.domain,
+            fetch_company,
+        )
 
-print("\n---ICP Score ---")
-print(icp_score.model_dump_json(indent=2))
+        icp_score = score_company(company)
 
-save_results_json(
-    company, 
-    icp_score,
-    filename=f"{company.domain}.json",
-)
+        print(company.model_dump_json(indent=2))
+        print(icp_score.model_dump_json(indent=2))
 
-save_results_csv(
-    company,
-    icp_score,
-)
+        save_results_json(
+            company, 
+            icp_score,
+            filename=f"{company.domain}.json",
+        )
 
-print("\nResults persisted to output/")
+        save_results_csv(company, icp_score)
+
+        return 0 
+    
+    except AbstractAPIError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1 
+
+# Entry-point validation
+if __name__ == "__main__":
+    raise SystemExit(main())
+
