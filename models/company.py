@@ -6,6 +6,7 @@ class CompanyLocation(BaseModel):
     state: Optional[str]= None
     country: Optional[str] = None
 
+# Input Data
 class Company(BaseModel):
     #Identity
     name: str
