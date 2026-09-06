@@ -5,20 +5,26 @@ from pathlib import Path
 from models.company import Company
 from models.icp import ICPScore
 
-OUTPUT_DIR = Path("output")
-OUTPUT_DIR.mkdir(exist_ok=True)
+DEFAULT_OUTPUT_DIR = Path("output")
 
 def save_results_json(
     company: Company,
     icp_score : ICPScore,
     filename: str = "result.json",
+    output_dir: Path = DEFAULT_OUTPUT_DIR,
 ) -> None: 
+
+    output_dir.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    path = output_dir / filename
+
     data = {
         "company": company.model_dump(),
         "icp_score": icp_score.model_dump(),
     }
-
-    path = OUTPUT_DIR / filename 
 
     with path.open("w", encoding="utf-8") as file:
         json.dump(data,file, indent=2)
@@ -28,8 +34,15 @@ def save_results_csv(
     company: Company,
     icp_score: ICPScore,
     filename: str = "results.csv",
+    output_dir: Path = DEFAULT_OUTPUT_DIR,
 ) -> None:
-    path = OUTPUT_DIR / filename
+
+    output_dir.mkdir(
+        parents=True,
+        exis_ok=True,
+    )
+
+    path = output_dir / filename
 
     row = {
         "name": company.name,

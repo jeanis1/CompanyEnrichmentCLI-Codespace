@@ -19,6 +19,7 @@ def test_save_results_json(
         qualified_company,
         qualified_score,
         "test.json",
+        output_dir=tmp_path
     )
 
     path = tmp_path / "test.json"
