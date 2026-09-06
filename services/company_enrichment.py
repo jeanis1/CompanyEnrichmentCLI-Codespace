@@ -29,4 +29,3 @@ def enrich_company(
 
         enrichment_source="abstract_api",
     )
-    return company

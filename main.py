@@ -23,14 +23,15 @@ def parse_args():
 
 def main() -> int:
     args = parse_args()
-    settings = Settings.from_env()
-
-    fetch_company = partial( 
-        get_company_by_domain,
-        api_key=settings.abstract_api_key,
-    )
 
     try:
+        settings = Settings.from_env()
+
+        fetch_company = partial( 
+            get_company_by_domain,
+            api_key=settings.abstract_api_key,
+        )
+
         company = enrich_company(
             args.domain,
             fetch_company,
@@ -45,9 +46,14 @@ def main() -> int:
             company, 
             icp_score,
             filename=f"{company.domain}.json",
+            output_dir=settings.output_dir
         )
 
-        save_results_csv(company, icp_score)
+        save_results_csv(
+            company,
+            icp_score,
+            output_dir=settings.output_dir,
+            )
 
         return 0 
     

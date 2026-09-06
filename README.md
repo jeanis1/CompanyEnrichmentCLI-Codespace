@@ -21,7 +21,7 @@ domain -> CLI -> API client -> raw JSON -> Pydantic model -> ICP scorer -> save 
 4. Pydantic Company model✅<br>
 5. Convert API response → Company✅<br>
 6. ICP score modeling function✅<br>
-7. Save data to JSON & CSV✅<br>4
+7. Save data to JSON & CSV✅<br>
 8. Handle API/network errors✅<br>
 9. Add retries/backoff✅<br>
 10. Unit tests✅<br>

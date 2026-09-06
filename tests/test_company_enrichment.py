@@ -24,8 +24,6 @@ def test_enrich_company_maps_api_response():
         fake_fetch_company,
     )
 
-    company = enrich_company("openai.com")
-
     assert company.name == "OpenAI"
     assert company.domain == "openai.com"
     assert company.employee_count == 1500

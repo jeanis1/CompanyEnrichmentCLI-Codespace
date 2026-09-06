@@ -26,13 +26,13 @@ def score_company(
             industry_score = 30
 
     #Geography fit 
-    if company.location.country == profile.countries:
+    if company.location.country in profile.countries:
         geography_score = 20
 
     #Revenue fit
     if (
         company.annual_revenue is not None
-        and company.annual_revenue >= 10_000_000
+        and company.annual_revenue >= profile.minimum_revenue
     ):
         revenue_score = 20
 

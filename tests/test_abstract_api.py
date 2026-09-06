@@ -33,7 +33,7 @@ def test_404_raises_company_not_found(monkeypatch):
     fake_response.status_code = 404 
 
     monkeypatch.setattr(
-        abstract_api,
+        abstract_api.requests,
         "get",
         Mock(return_value=fake_response),
     )
@@ -43,22 +43,9 @@ def test_404_raises_company_not_found(monkeypatch):
         match="Company not found",
     ): 
         abstract_api.get_company_by_domain(
-            "doesnotexist.com"
+            "doesnotexist.com",
             api_key="test-key",
         )
-
-
-def test_missing_api_key_raises_error(monkeypatch) : 
-    monkeypatch.setattr(
-        abstract_api,
-        "ABSTRACT_API_KEY",
-        None,
-    )
-
-    with pytest.raises(
-        AbstractAPIError,
-        match="ABSTRACT_API_KEY is not configured",
-    ): abstract_api.get_company_by_domain("openai.com")
 
 
 
@@ -145,11 +132,6 @@ def test_server_error_retries_then_succceds(monkeypatch):
             server_error,
             successful_response,
         ]
-    )
-    monkeypatch.setattr(
-        abstract_api,
-        "ABSTRACT_API_KEY",
-        "test-key",
     )
 
     monkeypatch.setattr(

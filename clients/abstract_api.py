@@ -144,14 +144,4 @@ def get_company_by_domain(
         raise AbstractAPIError(
             "Abstract API returned invalid JSON."
         ) from exc
-
-    # -----------------------
-    # Optional CLI Inspection
-    # -----------------------
-
-    if inspect_response: 
-        print("\n---Asbtract API Response ---")
-        print(json.dumps(data, indent=2))
-        print("------------------------------\n")
-
     return data

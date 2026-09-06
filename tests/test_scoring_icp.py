@@ -74,9 +74,9 @@ def test_custom_icp_profile_changes_scoring():
         minimum_employees=50,
         minimum_revenue=1_000_000,
         qualification_score=70,
-        indusries=frozenset({
+        industries=frozenset({
             "Technology",
-        })
+        }),
         countries=frozenset({
             "United States"
         }),

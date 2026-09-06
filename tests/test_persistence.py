@@ -5,7 +5,6 @@ from services import persistence
 
 def test_save_results_json(
         tmp_path,
-        monkeypatch,
         qualified_company,
         qualified_score
 ):
@@ -37,7 +36,7 @@ def test_save_results_csv(
     persistence.save_results_csv(
         qualified_company, 
         qualified_score,
-        filename="test.csv"
+        filename="test.csv",
         output_dir=tmp_path,
     )
 

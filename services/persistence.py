@@ -39,7 +39,7 @@ def save_results_csv(
 
     output_dir.mkdir(
         parents=True,
-        exis_ok=True,
+        exist_ok=True,
     )
 
     path = output_dir / filename
