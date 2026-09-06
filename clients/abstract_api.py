@@ -1,13 +1,7 @@
-import json
-import os 
 import time
 
 import requests
-from dotenv import load_dotenv 
 
-load_dotenv()
-
-ABSTRACT_API_KEY = os.getenv("ABSTRACT_API_KEY")
 ABSTRACT_COMPANY_URL = "https://companyenrichment.abstractapi.com/v1/"
 
 
@@ -31,16 +25,12 @@ def _wait_before_retry(attempt: int) -> None:
 
 def get_company_by_domain(
     domain: str,
-    inspect_response: bool = False,
+    *,
+    api_key: str,
 ) -> dict : 
-
-    if not ABSTRACT_API_KEY:
-        raise AbstractAPIError(
-            "ABSTRACT_API_KEY is not configured."
-        )
-
+    
     params = { 
-        "api_key": ABSTRACT_API_KEY,
+        "api_key": api_key,
         "domain": domain,
     }
 
