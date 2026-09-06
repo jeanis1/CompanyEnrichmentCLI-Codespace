@@ -15,21 +15,38 @@ def test_successful_request(monkeypatch):
     }
 
     monkeypatch.setattr(
-        abstract_api,
-        "ABSTRACT_API_KEY",
-        "test-key",
-    )
-
-    monkeypatch.setattr(
-        abstract_api.requests, 
+        abstract_api.requests,
         "get",
         Mock(return_value=fake_response),
     )
 
-    result = abstract_api.get_company_by_domain("openai.com")
+    result = abstract_api.get_company_by_domain(
+        "openai.com",
+        api_key="test-key",
+    )
 
     assert result["name"] == "OpenAI"
     assert result["domain"] == "openai.com"
+
+def test_404_raises_company_not_found(monkeypatch):
+    fake_response = Mock()
+    fake_response.status_code = 404 
+
+    monkeypatch.setattr(
+        abstract_api,
+        "get",
+        Mock(return_value=fake_response),
+    )
+
+    with pytest.raises(
+        AbstractAPIError,
+        match="Company not found",
+    ): 
+        abstract_api.get_company_by_domain(
+            "doesnotexist.com"
+            api_key="test-key",
+        )
+
 
 def test_missing_api_key_raises_error(monkeypatch) : 
     monkeypatch.setattr(
@@ -43,27 +60,7 @@ def test_missing_api_key_raises_error(monkeypatch) :
         match="ABSTRACT_API_KEY is not configured",
     ): abstract_api.get_company_by_domain("openai.com")
 
-def test_404_raises_company_not_found(monkeypatch):
-    fake_response = Mock()
-    fake_response.status_code = 404 
 
-    monkeypatch.setattr(
-        abstract_api,
-        "ABSTRACT_API_KEY",
-        "test-key"
-    )
-
-    monkeypatch.setattr(
-        abstract_api.requests,
-        "get",
-        Mock(return_value=fake_response),
-    )
-
-    with pytest.raises(
-        AbstractAPIError,
-        match="Company not found",
-    ): 
-        abstract_api.get_company_by_domain("doesnotexist.com")
 
 def test_timeout_retries_then_succeeds(monkeypatch):
     successful_response=Mock()
@@ -81,12 +78,6 @@ def test_timeout_retries_then_succeeds(monkeypatch):
     )
 
     monkeypatch.setattr(
-        abstract_api,
-        "ABSTRACT_API_KEY",
-        "test-key",
-    )
-
-    monkeypatch.setattr(
         abstract_api.requests,
         "get",
         mock_get,
@@ -99,7 +90,10 @@ def test_timeout_retries_then_succeeds(monkeypatch):
         Mock(),
     )
 
-    result = abstract_api.get_company_by_domain("openai.com")
+    result = abstract_api.get_company_by_domain(
+        "openai.com",
+        api_key="test-key"
+    )
 
     assert result["name"] == "OpenAI"
     assert mock_get.call_count == 2
@@ -107,12 +101,6 @@ def test_timeout_retries_then_succeeds(monkeypatch):
 def test_timeout_after_all_retries_raises_error(monkeypatch):
     mock_get = Mock(
         side_effect=requests.Timeout()
-    )
-
-    monkeypatch.setattr(
-        abstract_api,
-        "ABSTRACT_API_KEY",
-        "test-key",
     )
 
     monkeypatch.setattr(
@@ -132,7 +120,10 @@ def test_timeout_after_all_retries_raises_error(monkeypatch):
         match="timed out after retries",
     ):
 
-        abstract_api.get_company_by_domain("openai.com")
+        abstract_api.get_company_by_domain(
+            "openai.com",
+            api_key="test-key"
+        )
 
     assert mock_get.call_count == abstract_api.MAX_RETRIES + 1
 
@@ -173,7 +164,10 @@ def test_server_error_retries_then_succceds(monkeypatch):
         Mock(),
     )
 
-    result = abstract_api.get_company_by_domain("openai.com")
+    result = abstract_api.get_company_by_domain(
+        "openai.com",
+        api_key="test-key"
+    )
 
     assert result["name"] == "OpenAI"
     assert mock_get.call_count == 2 

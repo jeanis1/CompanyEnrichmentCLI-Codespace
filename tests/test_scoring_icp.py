@@ -1,8 +1,13 @@
 from models.company import Company
+from models.icp import ICPProfile
 from services.scoring_icp import score_company
 
-def test_qualified_company_gets_full_score(qualified_company):
-    result = score_company(qualified_company)
+def test_qualified_company_gets_full_score(
+    qualified_company,
+):
+    result = score_company(
+        qualified_company   
+    )
 
     assert result.score == 100 
     assert result.employee_score == 30
@@ -53,3 +58,34 @@ def test_missing_optional_data_does_not_crash():
     assert result.score == 0
     assert result.is_qualified is False
 
+def test_custom_icp_profile_changes_scoring():
+    company = Company(
+        name="Startup",
+        domain="startup.com",
+        industry="Technology",
+        employee_count=100,
+        annual_revenue=2_000_000,
+        location={
+            "country": "United States",
+        },
+    )
+
+    startup_icp = ICPProfile(
+        minimum_employees=50,
+        minimum_revenue=1_000_000,
+        qualification_score=70,
+        indusries=frozenset({
+            "Technology",
+        })
+        countries=frozenset({
+            "United States"
+        }),
+    )
+
+    result = score_company(
+        company,
+        startup_icp,
+    )
+
+    assert result.score == 100
+    assert result.is_qualified is True

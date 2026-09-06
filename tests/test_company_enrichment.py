@@ -1,6 +1,6 @@
 from services.company_enrichment import enrich_company
 
-def test_enrich_company_maps_api_response(monkeypatch):
+def test_enrich_company_maps_api_response():
     fake_response = { 
         "name": "OpenAI",
         "domain": "openai.com",
@@ -16,11 +16,12 @@ def test_enrich_company_maps_api_response(monkeypatch):
         "country": "United States",
     }
 
-    def fake_get_company_by_domain(domain):
+    def fake_fetch_company(domain: str) -> dict:
         return fake_response
 
-    monkeypatch.setattr("services.company_enrichment.get_company_by_domain",
-                        fake_get_company_by_domain,
+    company = enrich_company(
+        "openai.com",
+        fake_fetch_company,
     )
 
     company = enrich_company("openai.com")
