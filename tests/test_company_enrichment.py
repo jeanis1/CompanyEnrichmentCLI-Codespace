@@ -1,5 +1,8 @@
-from services.company_enrichment import enrich_company
+import pytest
 
+from pydantic import ValidationError
+
+from services.company_enrichment import enrich_company
 def test_enrich_company_maps_api_response():
     fake_response = { 
         "name": "OpenAI",
@@ -34,3 +37,25 @@ def test_enrich_company_maps_api_response():
     assert company.location.country == "United States"
 
     assert company.enrichment_source == "abstract_api"
+
+def test_malformed_company_data_raises_validation_error():
+    malformed_response = { 
+        "domain": "openai.com",
+        "industry": "Technology",
+        "employees_count": 1500,
+    }
+
+    def fake_fetch_company(domain: str) -> dict: 
+        return malformed_response
+    with pytest.raises(ValidationError) as exc_info:
+        enrich_company(
+            "openai.com",
+            fake_fetch_company,
+        )
+
+    error_fields = {
+        error["loc"]
+        for error in exc_info.value.errors()
+    }
+
+    assert ("name",) in error_fields

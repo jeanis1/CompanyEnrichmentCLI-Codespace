@@ -154,4 +154,27 @@ def test_server_error_retries_then_succceds(monkeypatch):
     assert result["name"] == "OpenAI"
     assert mock_get.call_count == 2 
 
-    
+def test_invalid_json_raises_error(monkeypatch):
+    fake_response = Mock()
+    fake_response.status_code = 200
+
+    fake_response.json.side_effect = requests.JSONDecodeError(
+        "Invalid JSON",
+        "",
+        0,
+    )
+
+    monkeypatch.setattr(
+        abstract_api.requests,
+        "get",
+        Mock(return_value=fake_response),
+    )
+
+    with pytest.raises(
+        AbstractAPIError,
+        match="Abstract API returned invalid JSON",
+    ):
+        abstract_api.get_company_by_domain(
+            "openai.com",
+            api_key="test-key",
+        )
