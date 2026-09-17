@@ -141,8 +141,9 @@ ABSTRACT_API_KEY=your_api_key
 # Usage
 
 **Single Account**
-
+```text
 python main.py example.com
+```
 
 The application:
 
@@ -156,8 +157,9 @@ The application:
 **Batch Processing**
 
 Planned / In Development
-
+```text
 python main.py --csv prospects.csv
+```
 
 Example input:
 
@@ -208,8 +210,3 @@ Planned batch tests include:
 * Partial-failure continuation
 * ICP ranking
 
-# Portfolio Context
-
-This project is part of an AI GTM Engineering development path focused on translating GTM business requirements into reliable software systems.
-
-The project demonstrates the progression from a basic API integration into a more realistic GTM workflow with validation, error handling, testing, batch processing, and reusable application architecture.
