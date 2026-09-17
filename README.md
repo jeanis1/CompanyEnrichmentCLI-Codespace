@@ -2,7 +2,7 @@
 
 Python-based GTM engineering workflow that enriches company domains, normalizes third-party API data, scores ICP fit, and processes prospect lists for sales qualification.
 
-Business Problem
+# Business Problem
 
 Sales and GTM teams often receive account lists that require enrichment, validation, deduplication, qualification, and prioritization before outreach.
 
@@ -86,7 +86,8 @@ The batch workflow is designed so that failure of an individual account does not
 
 # Project Structure
 
-CompanyEnrichmentCLI-Codespace/
+```text
+CompanyEnrichmentCLI-Codespace
 │
 ├── clients/
 │   └── abstract_api.py
@@ -106,6 +107,8 @@ CompanyEnrichmentCLI-Codespace/
 ├── main.py
 ├── requirements.txt
 └── README.md
+```
+
 
 Responsibilities
 
@@ -198,48 +201,12 @@ Current tests cover:
 
 Planned batch tests include:
 
-* Normal batch processing
-* Duplicate detection
-* Source preservation
+* Normal batch & error processing
 * Qualified and unqualified outcomes
 * Invalid domains
 * API failures
 * Partial-failure continuation
-* Batch result persistence
 * ICP ranking
-* Batch summary accuracy
-
-# Current Status
-
-V1 — Single Account Enrichment
-
-Complete
-
-* [x]	CLI domain input
-* [x]	External API integration
-* [x]	JSON parsing
-* [x]	Pydantic normalization
-* [x]	ICP scoring
-* [x]	JSON / CSV persistence
-* [x]	Error handling
-* [x]	Retry / backoff
-* [x]	Unit tests
-* [x]	Mock API tests
-
-V2 — Batch Account Qualification
-
-In Development
-
-* [ ]	CSV ingestion
-* [ ]	Input validation
-* [ ]	Deduplication
-* [ ]	Source preservation
-* [ ]	Account-level failure isolation
-* [ ]	ICP qualification
-* [ ]	ICP ranking
-* [ ]	Batch persistence
-* [ ]	Batch summary
-* [ ]	Batch-specific tests
 
 # Portfolio Context
 
