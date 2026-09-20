@@ -80,7 +80,6 @@ def remove_input_duplication(batch: list[dict]) -> list[dict]:
 
 
 def remove_database_duplication(batch: list[dict]) -> list[dict]:
-    # reference existing Database
     df = pd.read_csv("data/output/results.csv")
     existing_domains=set(
         df["Domain"]
@@ -95,10 +94,9 @@ def remove_database_duplication(batch: list[dict]) -> list[dict]:
             entry["status"] = "FAIL"
             entry["error_type"] = "Previous Existing"
             entry["error_message"] = f"Domain {domain} already exists in the database."
+
+    print(df.columns.tolist())
     return batch
-
-
-
 
 
 def build_list(results:list[dict]) -> None:
