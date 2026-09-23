@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 @dataclass(frozen=True)
 class Settings:
     abstract_api_key:str
-    output_dir: Path = Path("output")
+    output_dir: Path = Path("data/output")
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -23,6 +23,7 @@ class Settings:
 
         return cls(
             abstract_api_key=api_key,
+            output_dir=Path("data/output"),
         )
 
         

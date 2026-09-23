@@ -5,7 +5,7 @@ from pathlib import Path
 from models.company import Company
 from models.icp import ICPScore
 
-DEFAULT_OUTPUT_DIR = Path("output")
+DEFAULT_OUTPUT_DIR = Path("data/output")
 
 def save_results_json(
     company: Company,
