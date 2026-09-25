@@ -1,0 +1,14 @@
+Traceback (most recent call last):
+  File "/Users/jean/Desktop/CompanyEnrichmentCLI-Codespace/main.py", line 137, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "/Users/jean/Desktop/CompanyEnrichmentCLI-Codespace/main.py", line 130, in main
+    return process_batch(args.csv)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/jean/Desktop/CompanyEnrichmentCLI-Codespace/main.py", line 72, in process_batch
+    batch = remove_input_duplication(batch)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/jean/Desktop/CompanyEnrichmentCLI-Codespace/services/batch_processing.py", line 83, in remove_input_duplication
+    domain = entry["domain"]
+             ~~~~~^^^^^^^^^^
+TypeError: string indices must be integers, not 'str'

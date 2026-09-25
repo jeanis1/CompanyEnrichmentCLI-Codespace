@@ -25,7 +25,10 @@ def initialize_batch_processing(csv_path: str) -> list[dict]:
         for row_number, (_, row) in enumerate(df.iterrows(), start=1): 
             domain  = row["domain"]
             source = row["source"]
-            
+            # normalize input
+            if isinstance(domain, str): 
+                domain = domain.strip().lower()
+
             result = {
                     "row_number": row_number,
                     "domain": domain,
@@ -33,7 +36,7 @@ def initialize_batch_processing(csv_path: str) -> list[dict]:
                     "status": None,
                     "icp_score": None,
                     "qualification": None,
-                    "er0ror_type": None,
+                    "error_type": None,
                     "error_message": None,
                 }
             results.append(result)
@@ -72,41 +75,52 @@ def remove_input_duplication(batch: list[dict]) -> list[dict]:
     seen_domains = set()
 
     for entry in batch:
+        if entry["status"] == "FAIL":
+            continue
+
         domain = entry["domain"]
-        if domain not in seen_domains:
-            seen_domains.add(domain)
-        else:
+        
+        if domain in seen_domains:
             entry["status"] = "FAIL"
             entry["error_type"] = "Input Duplicate"
             entry["error_message"] = f"Duplicate domain found in input CSV: {domain}"
+        else:
+            seen_domains.add(domain)
+
     
     return batch
 
 
 def remove_database_duplication(batch: list[dict]) -> list[dict]:
     database = Path("data/output/results.csv")
-    if database.exists():
-        df = pd.read_csv("data/output/results.csv") 
-        not_failed_domains = set()
-        for entry in batch:
-            if entry["status"] != "FAIL":
-                not_failed_domains.add(entry["domain"].strip().lower())
-            
-        existing_database = set(df["domain"].str.strip().str.lower()) 
 
-        for entry in not_failed_domains: 
-            domain = entry["domain"].strip().lower()
-            if domain in existing_database:
-                entry["status"] = "FAIL"
-                entry["error_type"] = "Database Duplicate"
-                entry["error_message"] = f"Domain {domain} already exists in the database."
-        return batch
-    else :
+    if not database.exists():
         return batch
 
+    df = pd.read_csv(database)
+
+    existing_domains = set(
+        df["domain"]
+            .dropna()
+            .str.strip()
+            .str.lower()
+        )
+
+    for entry in batch: 
+        if entry["status"] == "FAIL":
+            continue
+        
+        domain = entry["domain"]
+
+        if domain in existing_domains:
+            entry["status"] = "FAIL"
+            entry["error_type"] = "Database Duplicate"
+            entry["error_message"] = f"Domain {domain} already exists in the database."
+    return batch
 
 
-def build_list(results:list[dict]) -> None:
+
+def save_batch_summary(results:list[dict]) -> None:
     results_df = pd.DataFrame(results)
     # TODO - NEED TO set output path as directory for below two functions:
 

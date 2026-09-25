@@ -7,7 +7,7 @@ from config import Settings
 from services.company_enrichment import enrich_company
 from services.persistence import save_results_json, save_results_csv
 from services.scoring_icp import score_company
-from services.batch_processing import BatchProcessingError, initialize_batch_processing, remove_database_duplication,remove_input_duplication, validate_domain_input, build_list, output_summary
+from services.batch_processing import BatchProcessingError, initialize_batch_processing, remove_database_duplication,remove_input_duplication, validate_domain_input, save_batch_summary, output_summary
 
 
 def parse_args():
@@ -67,19 +67,19 @@ def process_single_domain(domain: str) -> int:
 
 def process_batch(csv_path:str) -> int: 
     try:
-        initial_batch = initialize_batch_processing(csv_path)
-        basic_validated_batch = validate_domain_input(initial_batch)
-        deduplicated_batch = remove_input_duplication(basic_validated_batch)
-        processed_batch = remove_database_duplication(deduplicated_batch)
-        
+        batch = initialize_batch_processing(csv_path)
+        batch = validate_domain_input(batch)
+        batch = remove_input_duplication(batch)
+        batch = remove_database_duplication(batch)
+                       
 
     except BatchProcessingError as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 1
     
-    except Exception as exc:
-        print(f"Unexpected error: {exc}", file=sys.stderr)
-        return 1
+    except Exception:
+        raise
+
 
 
     settings = Settings.from_env()
@@ -89,7 +89,7 @@ def process_batch(csv_path:str) -> int:
         api_key=settings.abstract_api_key,
     )
 
-    for entry in processed_batch: 
+    for entry in batch: 
         domain = entry["domain"]
         if entry["status"] != "FAIL":
             try:
@@ -112,15 +112,14 @@ def process_batch(csv_path:str) -> int:
                 )
 
                 entry["status"] = "SUCCESS"
-                entry["icp_score"] = icp_score
 
             except Exception as e:
                 entry["status"] = "FAIL"
                 entry["error_type"] = type(e).__name__
                 entry["error_message"] = str(e)
 
-    build_list(processed_batch)
-    output_summary(processed_batch)
+    save_batch_summary(batch)
+    output_summary(batch)
     return 0
 
 
