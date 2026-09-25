@@ -7,7 +7,7 @@ from config import Settings
 from services.company_enrichment import enrich_company
 from services.persistence import save_results_json, save_results_csv
 from services.scoring_icp import score_company
-from services.batch_processing import BatchProcessingError, initialize_batch_processing, remove_database_duplication,remove_input_duplication, validate_domain_input, save_batch_summary, output_summary
+from services.batch_processing import BatchProcessingError, initialize_batch_processing, remove_database_duplication,remove_input_duplication, validate_domain_input, save_batch_summary, output_summary, order_and_rank_batch
 
 
 def parse_args():
@@ -71,7 +71,7 @@ def process_batch(csv_path:str) -> int:
         batch = validate_domain_input(batch)
         batch = remove_input_duplication(batch)
         batch = remove_database_duplication(batch)
-                       
+        
 
     except BatchProcessingError as exc:
         print(f"Error: {exc}", file=sys.stderr)
@@ -111,6 +111,7 @@ def process_batch(csv_path:str) -> int:
                     output_dir=settings.output_dir,
                 )
 
+                entry["icp_score"] = icp_score.score
                 entry["status"] = "SUCCESS"
 
             except Exception as e:
@@ -118,6 +119,7 @@ def process_batch(csv_path:str) -> int:
                 entry["error_type"] = type(e).__name__
                 entry["error_message"] = str(e)
 
+    batch = order_and_rank_batch(batch) 
     save_batch_summary(batch)
     output_summary(batch)
     return 0

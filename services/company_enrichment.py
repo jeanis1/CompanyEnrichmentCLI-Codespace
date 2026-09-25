@@ -1,6 +1,8 @@
 from collections.abc import Callable
 from models.company import Company, CompanyLocation
 
+class CompanyEnrichmentError(Exception): 
+    pass
 
 CompanyFetcher = Callable[[str], dict]
 
@@ -10,7 +12,12 @@ def enrich_company(
 ) -> Company:
 
     raw = fetch_company(domain)
-    
+
+    if not raw.get("name"):
+        raise CompanyEnrichmentError(
+            f"No usable company data found for domain: {domain}"
+        )    
+
     return Company(
         name = raw.get("name"),
         domain = raw.get("domain"),

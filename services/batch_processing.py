@@ -109,7 +109,7 @@ def remove_database_duplication(batch: list[dict]) -> list[dict]:
     for entry in batch: 
         if entry["status"] == "FAIL":
             continue
-        
+
         domain = entry["domain"]
 
         if domain in existing_domains:
@@ -119,17 +119,32 @@ def remove_database_duplication(batch: list[dict]) -> list[dict]:
     return batch
 
 
+def order_and_rank_batch(batch:list[dict]) -> list[dict]:
+    for entry in batch: 
+        if entry["status"] == "FAIL":
+            entry["icp_score"] = 0
+    ordered_batch = sorted(
+        batch, 
+        key=lambda entry: (
+            entry["icp_score"]
+            if entry["icp_score"] is not None
+            else 0
+        ), 
+        reverse = True,
+    )
+    print(ordered_batch)
+    return ordered_batch 
+
+
 
 def save_batch_summary(results:list[dict]) -> None:
     results_df = pd.DataFrame(results)
-    # TODO - NEED TO set output path as directory for below two functions:
-
-    # Log Batch
+    # Log Batch 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     settings = Settings.from_env()
     output_path = settings.output_dir / f"batch-results_{timestamp}.csv"
     results_df.to_csv(output_path, index=False)
-    # Also save to overwrite most recent for easy access
+    # Also overwrite most recent for easy access
     recent_path = settings.output_dir / "batch_results_most_recent.csv"
     results_df.to_csv(recent_path, index=False)
 
