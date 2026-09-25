@@ -142,7 +142,7 @@ ABSTRACT_API_KEY=your_api_key
 
 **Single Account**
 ```text
-python main.py example.com
+python main.py --domain example.com
 ```
 
 The application:
@@ -156,7 +156,6 @@ The application:
 
 **Batch Processing**
 
-Planned / In Development
 ```text
 python main.py --csv prospects.csv
 ```
@@ -186,8 +185,9 @@ Batch-level failures, such as an unreadable input CSV, terminate the batch with 
 # Testing
 
 Run the test suite:
-
+```text
 python -m pytest
+```
 
 Current tests cover:
 

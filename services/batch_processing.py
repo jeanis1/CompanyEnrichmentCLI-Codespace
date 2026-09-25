@@ -1,6 +1,7 @@
 import pandas as pd
 import re 
 
+from pathlib import Path
 from config import Settings
 from datetime import datetime
 
@@ -32,7 +33,7 @@ def initialize_batch_processing(csv_path: str) -> list[dict]:
                     "status": None,
                     "icp_score": None,
                     "qualification": None,
-                    "error_type": None,
+                    "er0ror_type": None,
                     "error_message": None,
                 }
             results.append(result)
@@ -83,16 +84,25 @@ def remove_input_duplication(batch: list[dict]) -> list[dict]:
 
 
 def remove_database_duplication(batch: list[dict]) -> list[dict]:
-    df = pd.read_csv("data/output/results.csv") 
-    existing_database = set(df["domain"].str.strip().str.lower()) 
+    database = Path("data/output/results.csv")
+    if database.exists():
+        df = pd.read_csv("data/output/results.csv") 
+        not_failed_domains = set()
+        for entry in batch:
+            if entry["status"] != "FAIL":
+                not_failed_domains.add(entry["domain"].strip().lower())
+            
+        existing_database = set(df["domain"].str.strip().str.lower()) 
 
-    for entry in batch: 
-        domain = entry["domain"].strip().lower()
-        if domain in existing_database:
-            entry["status"] = "FAIL"
-            entry["error_type"] = "Database Duplicate"
-            entry["error_message"] = f"Domain {domain} already exists in the database."
-    return batch
+        for entry in not_failed_domains: 
+            domain = entry["domain"].strip().lower()
+            if domain in existing_database:
+                entry["status"] = "FAIL"
+                entry["error_type"] = "Database Duplicate"
+                entry["error_message"] = f"Domain {domain} already exists in the database."
+        return batch
+    else :
+        return batch
 
 
 
