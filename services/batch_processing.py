@@ -152,13 +152,20 @@ def save_batch_summary(results:list[dict]) -> None:
 
 def output_summary(results:list[dict]) -> None:
     total_rows = len(results)
-    valid_rows = sum(1 for entry in results if entry["status"] is None)
+    # Balid input (not API called)
+    valid_rows = (
+                sum(1 for entry in results if entry["status"] is "SUCCESS") 
+                + sum(1 for entry in results if entry["status"] is "FAIL" and 
+                entry["error_type"] is "CompanyEnrichmentError"
+    ))
+    
+    # How many domain API calls were successful
     success_rows = sum(1 for entry in results if entry["status"] == "SUCCESS")
     fail_rows = sum(1 for entry in results if entry["status"] == "FAIL")
 
     print("\nBatch Processing Summary:")
     print(f"Total input rows: {total_rows}")
     print(f"Valid unique accounts processed: {valid_rows}")
+    print(f"Failures: {fail_rows}")
     print(f"Successfully enriched: {success_rows}")
-    print(f"Failed: {fail_rows}")
     
