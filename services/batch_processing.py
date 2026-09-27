@@ -58,7 +58,7 @@ def initialize_batch_processing(csv_path: str) -> list[dict]:
         ) from exc
 
 
-def validate_domain_input(batch: list[dict]) -> list[dict]:
+def validate_input(batch: list[dict]) -> list[dict]:
     for entry in batch :
         domain = entry["domain"]
         if ( not isinstance(domain, str) 
@@ -68,7 +68,15 @@ def validate_domain_input(batch: list[dict]) -> list[dict]:
             entry["status"] = "FAIL"
             entry["error_type"] = "Invalid Domain"
             entry["error_message"] = f"Domain is not a valid string: {domain}"
+
+    for entry in batch :
+        source = entry["source"]
+        if pd.isna(source) or not isinstance(source, str) or not source.strip():
+            entry["status"] = "FAIL"
+            entry["error_type"] = "Source Missing"
+            entry["error_message"] = f"Source is missing: {domain}"
     return batch    
+
 
 
 def remove_input_duplication(batch: list[dict]) -> list[dict]:
@@ -87,7 +95,6 @@ def remove_input_duplication(batch: list[dict]) -> list[dict]:
         else:
             seen_domains.add(domain)
 
-    
     return batch
 
 

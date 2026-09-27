@@ -7,7 +7,7 @@ from config import Settings
 from services.company_enrichment import enrich_company_apollo, CompanyEnrichmentError
 from services.persistence import save_results_json, save_results_csv
 from services.scoring_icp import score_company
-from services.batch_processing import BatchProcessingError, initialize_batch_processing, remove_database_duplication,remove_input_duplication, validate_domain_input, save_batch_summary, output_summary, order_and_rank_batch
+from services.batch_processing import BatchProcessingError, initialize_batch_processing, remove_database_duplication,remove_input_duplication, validate_input, save_batch_summary, output_summary, order_and_rank_batch
 
 
 def parse_args():
@@ -72,7 +72,7 @@ def process_single_domain(domain: str) -> int:
 def process_batch(csv_path:str) -> int: 
     try:
         batch = initialize_batch_processing(csv_path)
-        batch = validate_domain_input(batch)
+        batch = validate_input(batch)
         batch = remove_input_duplication(batch)
         batch = remove_database_duplication(batch)
         
