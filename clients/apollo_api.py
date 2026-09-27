@@ -1,0 +1,155 @@
+import time 
+import requests
+
+APOLLO_COMPANY_URL = "https://api.apollo.io/api/v1/organizations/enrich"
+
+MAX_RETRIES = 3 
+BACKOFF_SECONDS = 1 
+
+#Temporary failures that may succeed if retried 
+RETRYABLE_STATUS_CODES = {
+    429, # Too many requests
+    500, # Internal server error
+    502, # Bad Gateway
+    503, # Service unavailable
+    504, # Gateway Timeout
+}
+
+class ApolloAPIError(Exception):
+    pass
+
+def _wait_before_retry(attempt: int) -> None:
+    delay = BACKOFF_SECONDS * (2 ** attempt)
+    time.sleep(delay)
+
+def get_company_by_domain_apollo(
+        domain: str,
+        *,
+        api_key: str,       
+) -> dict : 
+    params = {
+        "domain": domain,
+    }
+
+    for attempt in range(MAX_RETRIES + 1):
+        try:
+            headers = {
+                "Cache-Control": "no-cache",
+                "Content-Type": "application/json",
+                "accept": "application/json",
+                "x-api-key": api_key
+            }
+
+            response = requests.get(
+                APOLLO_COMPANY_URL, 
+                params=params,
+                headers=headers,
+                timeout=10
+                )
+
+            print(response.text)
+            # print("STATUS:", response.status_code)
+            # print("BODY:", response.text)
+            # -----------------------
+            # Retry temporary HTTP failures
+            # -----------------------
+
+            if response.status_code in RETRYABLE_STATUS_CODES:
+                if attempt < MAX_RETRIES:
+
+                    # If the API tells us how long to wait,
+                    # prefer that over our own backoff.
+                    retry_after = response.headers.get("Retry-After")
+
+                    if retry_after and retry_after.isdigit(): 
+                        time.sleep(int(retry_after))
+                    else: 
+                        _wait_before_retry(attempt)
+
+                    continue
+
+            # -----------------------
+            # Non-retryable API errors
+            # -----------------------
+
+            if response.status_code == 400:
+                raise ApolloAPIError(
+                    f"Invalid request for domain: {domain}"
+                )
+
+            if response.status_code == 401: 
+                raise ApolloAPIError(
+                    "Apollo API key is invalid or missing."
+                )
+
+            if response.status_code == 403:
+                raise ApolloAPIError(
+                    "Apollo API request is forbidden."
+                )
+
+            if response.status_code == 404:
+                raise ApolloAPIError(
+                    f"Company not found for domain: {domain}"
+                )
+            
+        # -----------------------
+        # Retries exhausted
+        # -----------------------
+
+            if response.status_code == 429:
+                raise ApolloAPIError(
+                    "ApolloAPIError API rate limit exceeded after retries."
+                )
+
+            if 500 <= response.status_code < 600:
+                raise ApolloAPIError(
+                    f"Apollo API server error after retries: "
+                    f"{response.status_code}"
+                )
+
+            # Catch any other HTTP errors
+            response.raise_for_status()
+
+            break
+
+
+        # -----------------------
+        # Network errors
+        # -----------------------
+
+        except requests.Timeout as exc: 
+            if attempt < MAX_RETRIES: 
+                _wait_before_retry(attempt)
+                continue
+
+            raise ApolloAPIError(
+                f"Apollo API timed out after retries for: {domain}"
+            ) from exc
+
+        except requests.ConnectionError as exc:
+            if attempt < MAX_RETRIES: 
+                _wait_before_retry(attempt)
+                continue
+
+            raise ApolloAPIError(
+                f"Could not connect to Apollo API "
+                f"after retries for: {domain}"
+            ) from exc 
+
+        except requests.RequestException as exc:
+            raise ApolloAPIError(
+                f"Apollo API request failed for: {domain}"
+            ) from exc
+
+    # -----------------------
+    # Validate response as JSON
+    # -----------------------
+
+    try: 
+        data = response.json()
+
+    except requests.JSONDecodeError as exc: 
+        raise ApolloAPIError(
+            "Apollo API returned invalid JSON."
+        ) from exc
+    return data

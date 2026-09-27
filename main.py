@@ -2,9 +2,9 @@ import argparse
 import sys
 
 from functools import partial
-from clients.abstract_api import AbstractAPIError, get_company_by_domain
+from clients.apollo_api import ApolloAPIError, get_company_by_domain_apollo
 from config import Settings
-from services.company_enrichment import enrich_company
+from services.company_enrichment import enrich_company_apollo, CompanyEnrichmentError
 from services.persistence import save_results_json, save_results_csv
 from services.scoring_icp import score_company
 from services.batch_processing import BatchProcessingError, initialize_batch_processing, remove_database_duplication,remove_input_duplication, validate_domain_input, save_batch_summary, output_summary, order_and_rank_batch
@@ -33,18 +33,22 @@ def process_single_domain(domain: str) -> int:
     try:
         settings = Settings.from_env()
 
+        #API Call
         fetch_company = partial( 
-            get_company_by_domain,
-            api_key=settings.abstract_api_key,
+            get_company_by_domain_apollo,
+            api_key=settings.apollo_api_key,
         )
 
-        company = enrich_company(
+        #Enrichment
+        company = enrich_company_apollo(
             domain,
             fetch_company,
         )
 
+        #Scoring
         icp_score = score_company(company)
-
+        
+        #Persistence
         save_results_json(
             company, 
             icp_score,
@@ -60,76 +64,76 @@ def process_single_domain(domain: str) -> int:
 
         return 0 
     
-    except AbstractAPIError as exc:
+    except (ApolloAPIError, CompanyEnrichmentError) as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 1 
 
 
-def process_batch(csv_path:str) -> int: 
-    try:
-        batch = initialize_batch_processing(csv_path)
-        batch = validate_domain_input(batch)
-        batch = remove_input_duplication(batch)
-        batch = remove_database_duplication(batch)
+# def process_batch(csv_path:str) -> int: 
+#     try:
+#         batch = initialize_batch_processing(csv_path)
+#         batch = validate_domain_input(batch)
+#         batch = remove_input_duplication(batch)
+#         batch = remove_database_duplication(batch)
         
 
-    except BatchProcessingError as exc:
-        print(f"Error: {exc}", file=sys.stderr)
-        return 1
+#     except BatchProcessingError as exc:
+#         print(f"Error: {exc}", file=sys.stderr)
+#         return 1
     
-    except Exception:
-        raise
+#     except Exception:
+#         raise
 
 
 
-    settings = Settings.from_env()
+#     settings = Settings.from_env()
 
-    fetch_company = partial( 
-        get_company_by_domain,
-        api_key=settings.abstract_api_key,
-    )
+#     fetch_company = partial( 
+#         get_company_by_domain,
+#         api_key=settings.abstract_api_key,
+#     )
 
-    for entry in batch: 
-        domain = entry["domain"]
-        if entry["status"] != "FAIL":
-            try:
-                company = enrich_company(
-                    domain,
-                    fetch_company,
-                )
+#     for entry in batch: 
+#         domain = entry["domain"]
+#         if entry["status"] != "FAIL":
+#             try:
+#                 company = enrich_company(
+#                     domain,
+#                     fetch_company,
+#                 )
 
-                icp_score = score_company(company)
+#                 icp_score = score_company(company)
 
-                save_results_json(company, icp_score, 
-                filename=f"{company.domain}.json",
-                output_dir=settings.output_dir
-                )
+#                 save_results_json(company, icp_score, 
+#                 filename=f"{company.domain}.json",
+#                 output_dir=settings.output_dir
+#                 )
 
-                save_results_csv(
-                    company,
-                    icp_score,
-                    output_dir=settings.output_dir,
-                )
+#                 save_results_csv(
+#                     company,
+#                     icp_score,
+#                     output_dir=settings.output_dir,
+#                 )
 
-                entry["icp_score"] = icp_score.score
-                entry["status"] = "SUCCESS"
+#                 entry["icp_score"] = icp_score.score
+#                 entry["status"] = "SUCCESS"
 
-            except Exception as e:
-                entry["status"] = "FAIL"
-                entry["error_type"] = type(e).__name__
-                entry["error_message"] = str(e)
+#             except Exception as e:
+#                 entry["status"] = "FAIL"
+#                 entry["error_type"] = type(e).__name__
+#                 entry["error_message"] = str(e)
 
-    batch = order_and_rank_batch(batch) 
-    save_batch_summary(batch)
-    output_summary(batch)
-    return 0
+#     batch = order_and_rank_batch(batch) 
+#     save_batch_summary(batch)
+#     output_summary(batch)
+#     return 0
 
 
 
 def main() -> int:
     args = parse_args()
-    if args.csv: 
-        return process_batch(args.csv)
+    # if args.csv: 
+    #     return process_batch(args.csv)
 
     return process_single_domain(args.domain)
 

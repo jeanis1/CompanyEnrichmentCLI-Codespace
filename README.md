@@ -121,23 +121,25 @@ Responsibilities
 # Setup
 
 Clone the repository:
-
+```text
 git clone <repository-url>
 cd CompanyEnrichmentCLI-Codespace
+```
 
 Create and activate a virtual environment:
-
+```text
 python -m venv .venv
 source .venv/bin/activate
+```
 
 Install dependencies:
-
+```text
 pip install -r requirements.txt
-
+```
 Create a .env file:
-
+```text
 ABSTRACT_API_KEY=your_api_key
-
+```
 # Usage
 
 **Single Account**
