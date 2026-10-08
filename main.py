@@ -159,12 +159,17 @@ def manual_database_processing(company_name: str,settings: Settings) -> None:
             row["icp_score"]
         )
 
-        # Print ICP Score by rank
-        # icp_list = get_highest_icp_score(conn)
+        #Get specific industry from DB - WORKING
+        # select_industry_list = repository.get_industry_count(conn, "Computer software")
+        # for row in select_industry_list:
+        #     print(row)
+
+        # Rank Top ICP Scores - WORKING
+        # icp_list = repository.get_highest_icp_score(conn)
         # for row in icp_list:
         #     print(row)
 
-        # Get Count by Industry
+        # Get Total Count of All Industry - WORKING
         # industry_total_list = repository.get_industry_count(conn)
         # for row in industry_total_list:
         #     print(row)

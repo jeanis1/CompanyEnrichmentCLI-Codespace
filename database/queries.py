@@ -32,9 +32,19 @@ LIMIT 5
 """
 
 
-GET_INDUSTRY_COUNT = """
+GET_ALL_INDUSTRY_COUNT = """
 SELECT industry, COUNT(*) as total_accounts
 FROM companies 
 GROUP BY industry
 ORDER BY total_accounts DESC;
+"""
+
+
+GET_THIS_INDUSTRY = """
+SELECT c.name, c.domain, q.icp_score
+FROM companies c 
+JOIN qualification_results q 
+    ON c.id = q.company_id
+WHERE c.industry = %s
+ORDER BY q.icp_score DESC;
 """

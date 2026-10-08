@@ -45,10 +45,12 @@ def get_table(conn, table) -> list[dict]:
         columns = [desc[0] for desc in cursor.description]
         return [dict(zip(columns, row)) for row in rows]
 
-def get_industry_count(conn) -> list[int] :
+def get_total_industry_count(conn) -> list[int] :
     with conn.cursor() as cursor:
-        cursor.execute(queries.GET_INDUSTRY_COUNT)
+        cursor.execute(queries.GET_ALL_INDUSTRY_COUNT)
         return cursor.fetchall()
     
-
-   
+def get_industry_count(conn, industry) -> list[int] :
+    with conn.cursor() as cursor:
+        cursor.execute(queries.GET_THIS_INDUSTRY, (industry,))
+        return cursor.fetchall()
