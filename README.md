@@ -24,8 +24,6 @@ This project automates that workflow while handling invalid inputs, API failures
 
 **V2 — Batch Account Qualification**
 
-Status: In Development
-
 * CSV prospect-list ingestion
 * Domain validation
 * Duplicate detection

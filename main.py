@@ -8,6 +8,12 @@ from services.company_enrichment import enrich_company_apollo, CompanyEnrichment
 from services.persistence import save_results_json, save_results_csv
 from services.scoring_icp import score_company
 from services.batch_processing import BatchProcessingError, initialize_batch_processing, remove_database_duplication,remove_input_duplication, validate_input, save_batch_summary, output_summary, order_and_rank_batch
+import pandas as pd
+
+from database.init_db import create_tables
+from database.database import get_connection
+from database import repository 
+
 
 
 def parse_args():
@@ -27,11 +33,15 @@ def parse_args():
         help="CSV file containing domains to process",
     )
 
+    group.add_argument(
+        "--db",
+        help="Manually process Company from the database.",
+    )
+
     return parser.parse_args()
 
-def process_single_domain(domain: str) -> int:
+def process_single_domain(domain: str, settings : Settings) -> int:
     try:
-        settings = Settings.from_env()
 
         #API Call
         fetch_company = partial( 
@@ -69,7 +79,7 @@ def process_single_domain(domain: str) -> int:
         return 1 
 
 
-def process_batch(csv_path:str) -> int: 
+def process_batch(csv_path:str, settings: Settings) -> int: 
     try:
         batch = initialize_batch_processing(csv_path)
         batch = validate_input(batch)
@@ -84,9 +94,6 @@ def process_batch(csv_path:str) -> int:
     except Exception:
         raise
 
-
-
-    settings = Settings.from_env()
 
     fetch_company = partial( 
         get_company_by_domain_apollo,
@@ -106,13 +113,13 @@ def process_batch(csv_path:str) -> int:
 
                 save_results_json(company, icp_score, 
                 filename=f"{company.domain}.json",
-                output_dir=settings.output_dir
+                output_dir=Settings.output_dir
                 )
 
                 save_results_csv(
                     company,
                     icp_score,
-                    output_dir=settings.output_dir,
+                    output_dir=Settings.output_dir,
                 )
 
                 entry["icp_score"] = icp_score.score
@@ -129,13 +136,67 @@ def process_batch(csv_path:str) -> int:
     return 0
 
 
+def manual_database_processing(company_name: str,settings: Settings) -> None: 
+
+    conn = get_connection(settings.database_url)
+    company_name = company_name.strip().lower()
+    df = pd.read_csv("data/output/results.csv")
+    
+    match = df[df["name"].str.lower() == company_name]
+    if match.empty:
+        print(f"Company {company_name} not found.")
+        conn.close()
+        return
+    
+    try:
+        row = match.iloc[0]
+        company_id = repository.insert_company(conn, row) 
+        run_id = repository.insert_enrichment_run(conn, row)
+        repository.insert_qualification_result(
+            conn,
+            company_id, 
+            run_id,
+            row["icp_score"]
+        )
+
+        # Print ICP Score by rank
+        # icp_list = get_highest_icp_score(conn)
+        # for row in icp_list:
+        #     print(row)
+
+        # Get Count by Industry
+        # industry_total_list = repository.get_industry_count(conn)
+        # for row in industry_total_list:
+        #     print(row)
+        
+        # print(f"Inserted company:  {company_id}")
+        # print("---- Companies ----")
+        # print(get_table(conn, "companies"))
+        # print("---- Enrichment Runs ----")
+        # print(get_table(conn, "enrichment_runs"))
+        # print("---- Qualification Results ----")
+        # print(get_table(conn, "qualification_results"))
+
+
+        conn.commit()
+
+    finally:
+        conn.close()
+
+
 
 def main() -> int:
+    settings = Settings.from_env()
+    conn = get_connection(settings.database_url)
+    create_tables(conn)
+
     args = parse_args()
     if args.csv: 
-        return process_batch(args.csv)
-
-    return process_single_domain(args.domain)
+        return process_batch(args.csv, settings)
+    if args.db:
+        return manual_database_processing(args.db, settings)
+    
+    return process_single_domain(args.domain, settings)
 
 
 # Entry-point validation

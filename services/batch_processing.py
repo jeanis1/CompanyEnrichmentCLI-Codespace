@@ -159,7 +159,7 @@ def save_batch_summary(results:list[dict]) -> None:
 
 def output_summary(results:list[dict]) -> None:
     total_rows = len(results)
-    # Balid input (not API called)
+    # Valid input (not API called)
     valid_rows = (
                 sum(1 for entry in results if entry["status"] is "SUCCESS") 
                 + sum(1 for entry in results if entry["status"] is "FAIL" and 
@@ -176,3 +176,5 @@ def output_summary(results:list[dict]) -> None:
     print(f"Failures: {fail_rows}")
     print(f"Successfully enriched: {success_rows}")
     
+
+  
