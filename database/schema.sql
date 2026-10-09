@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS companies (
 
 CREATE TABLE IF NOT EXISTS enrichment_runs ( 
     id BIGSERIAL PRIMARY KEY,
+    company_id BIGINT REFERENCES companies(id) NOT NULL,
     started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     result TEXT -- success / fail
 );

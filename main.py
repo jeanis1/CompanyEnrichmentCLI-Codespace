@@ -151,13 +151,23 @@ def manual_database_processing(company_name: str,settings: Settings) -> None:
     try:
         row = match.iloc[0]
         company_id = repository.insert_company(conn, row) 
-        run_id = repository.insert_enrichment_run(conn, row)
+        run_id = repository.insert_enrichment_run(conn,company_id, row)
         repository.insert_qualification_result(
             conn,
             company_id, 
             run_id,
             row["icp_score"]
         )
+
+
+        
+        # print(f"Inserted company:  {company_id}")
+        # print("---- Companies ----")
+        # print(repository.get_table(conn, "companies"))
+        # print("---- Enrichment Runs ----")
+        # print(repository.get_table(conn, "enrichment_runs"))
+        # print("---- Qualification Results ----")
+        # print(repository.get_table(conn, "qualification_results"))
 
         #Get specific industry from DB - WORKING
         # select_industry_list = repository.get_industry_count(conn, "Computer software")
@@ -173,15 +183,11 @@ def manual_database_processing(company_name: str,settings: Settings) -> None:
         # industry_total_list = repository.get_industry_count(conn)
         # for row in industry_total_list:
         #     print(row)
-        
-        # print(f"Inserted company:  {company_id}")
-        # print("---- Companies ----")
-        # print(get_table(conn, "companies"))
-        # print("---- Enrichment Runs ----")
-        # print(get_table(conn, "enrichment_runs"))
-        # print("---- Qualification Results ----")
-        # print(get_table(conn, "qualification_results"))
 
+        # Get List of enrichment failed
+        failed_list = repository.get_failed(conn)
+        for row in failed_list:
+            print(row)
 
         conn.commit()
 

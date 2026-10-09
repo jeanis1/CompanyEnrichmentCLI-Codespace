@@ -9,8 +9,8 @@ RETURNING id;
 """
 
 INSERT_ENRICHMENT_RUN = """
-INSERT INTO enrichment_runs(result)
-VALUES (%s)
+INSERT INTO enrichment_runs(company_id, result)
+VALUES (%s,%s)
 RETURNING id;
 """
 
@@ -48,3 +48,13 @@ JOIN qualification_results q
 WHERE c.industry = %s
 ORDER BY q.icp_score DESC;
 """
+
+GET_FAILED = """
+SELECT c.name, c.domain
+FROM companies c
+JOIN enrichment_runs e
+    ON c.id = e.company_id
+WHERE e.result = 'fail'
+"""
+
+
