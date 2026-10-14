@@ -57,4 +57,16 @@ JOIN enrichment_runs e
 WHERE e.result = 'fail'
 """
 
+#Technically unecessary due to insertion & formatting preventing duplicates, however included as part of exercise challenge.
+GET_DUPLICATE = """
+SELECT LOWER(TRIM(domain)), COUNT(*) AS cnt
+FROM companies
+GROUP BY LOWER(TRIM(domain))
+HAVING COUNT(*) > 1
+ORDER BY cnt DESC;
+"""
+
+
+
+
 

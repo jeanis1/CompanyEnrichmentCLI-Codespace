@@ -138,7 +138,6 @@ def process_batch(csv_path:str, settings: Settings) -> int:
 
 def manual_database_processing(company_name: str,settings: Settings) -> None: 
 
-    conn = get_connection(settings.database_url)
     company_name = company_name.strip().lower()
     df = pd.read_csv("data/output/results.csv")
     
@@ -147,6 +146,8 @@ def manual_database_processing(company_name: str,settings: Settings) -> None:
         print(f"Company {company_name} not found.")
         conn.close()
         return
+    
+    conn = get_connection(settings.database_url)
     
     try:
         row = match.iloc[0]
@@ -158,16 +159,6 @@ def manual_database_processing(company_name: str,settings: Settings) -> None:
             run_id,
             row["icp_score"]
         )
-
-
-        
-        # print(f"Inserted company:  {company_id}")
-        # print("---- Companies ----")
-        # print(repository.get_table(conn, "companies"))
-        # print("---- Enrichment Runs ----")
-        # print(repository.get_table(conn, "enrichment_runs"))
-        # print("---- Qualification Results ----")
-        # print(repository.get_table(conn, "qualification_results"))
 
         #Get specific industry from DB - WORKING
         # select_industry_list = repository.get_industry_count(conn, "Computer software")
@@ -184,11 +175,16 @@ def manual_database_processing(company_name: str,settings: Settings) -> None:
         # for row in industry_total_list:
         #     print(row)
 
-        # Get List of enrichment failed
-        failed_list = repository.get_failed(conn)
-        for row in failed_list:
-            print(row)
+        # Get List of enrichment failed - WORKING
+        # failed_list = repository.get_failed(conn)
+        # for row in failed_list:
+        #     print(row)
 
+        # Get Duplicate Name Domains : Should Return None (due to overwrite instead of creation for duplicate domains)
+        print("Duplicate Items : ")
+        duplicate_list = repository.get_duplicate(conn)
+        print(duplicate_list)
+        
         conn.commit()
 
     finally:

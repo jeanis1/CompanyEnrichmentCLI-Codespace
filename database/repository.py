@@ -1,12 +1,13 @@
 from . import queries
 import math 
 
-def insert_company(conn, company) -> int : 
+def insert_company(conn, row) -> int : 
+    domain = row["domain"].strip().lower()
     cursor = conn.execute(
         queries.INSERT_COMPANY,
-        (company["name"],
-         company["domain"],
-         company["industry"],
+        (row["name"],
+         domain,
+         row["industry"],
         )
     )
 
@@ -63,4 +64,7 @@ def get_failed(conn) -> list[str] :
         cursor.execute(queries.GET_FAILED)
         return cursor.fetchall()
 
-
+def get_duplicate(conn) -> list[str] : 
+    with conn.cursor() as cursor:
+        cursor.execute(queries.GET_DUPLICATE)
+        return cursor.fetchall()

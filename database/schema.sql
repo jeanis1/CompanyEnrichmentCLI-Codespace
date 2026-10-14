@@ -18,5 +18,6 @@ CREATE TABLE IF NOT EXISTS qualification_results (
     id BIGSERIAL PRIMARY KEY,
     company_id BIGINT REFERENCES companies(id) NOT NULL,
     enrichment_run_id BIGINT REFERENCES enrichment_runs(id),
-    icp_score INTEGER
+    icp_score INTEGER,
+    is_qualified BOOLEAN
 );
