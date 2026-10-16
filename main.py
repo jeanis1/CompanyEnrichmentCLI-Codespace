@@ -157,7 +157,8 @@ def manual_database_processing(company_name: str,settings: Settings) -> None:
             conn,
             company_id, 
             run_id,
-            row["icp_score"]
+            row["icp_score"],
+            row["is_qualified"],
         )
 
         #Get specific industry from DB - WORKING
@@ -181,9 +182,14 @@ def manual_database_processing(company_name: str,settings: Settings) -> None:
         #     print(row)
 
         # Get Duplicate Name Domains : Should Return None (due to overwrite instead of creation for duplicate domains)
-        print("Duplicate Items : ")
-        duplicate_list = repository.get_duplicate(conn)
-        print(duplicate_list)
+        # print("Duplicate Items : ")
+        # duplicate_list = repository.get_duplicate(conn)
+        # print(duplicate_list)
+        
+        # Get % Qualified from all accounts in DB 
+        print("Total Qualified : ")
+        total_qualfied_list = repository.get_qualification_results(conn)
+        print(f"{total_qualfied_list}%")
         
         conn.commit()
 

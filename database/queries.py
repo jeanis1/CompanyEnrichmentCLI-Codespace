@@ -16,8 +16,8 @@ RETURNING id;
 
 
 INSERT_QUALIFICATION_RESULT =  """
-INSERT INTO qualification_results(company_id, enrichment_run_id, icp_score)
-VALUES(%s, %s, %s)
+INSERT INTO qualification_results(company_id, enrichment_run_id, icp_score, is_qualified)
+VALUES(%s, %s, %s, %s)
 RETURNING id;
 """
 
@@ -57,7 +57,7 @@ JOIN enrichment_runs e
 WHERE e.result = 'fail'
 """
 
-#Technically unecessary due to insertion & formatting preventing duplicates, however included as part of exercise challenge.
+#Unecessary due to input formatting preventing duplicates, but included as learning challenge.
 GET_DUPLICATE = """
 SELECT LOWER(TRIM(domain)), COUNT(*) AS cnt
 FROM companies
@@ -65,6 +65,12 @@ GROUP BY LOWER(TRIM(domain))
 HAVING COUNT(*) > 1
 ORDER BY cnt DESC;
 """
+
+GET_TOTAL_QUALIFICATION = """
+SELECT ROUND(100.0 * COUNT(*) FILTER (WHERE is_qualified) / COUNT(*), 2) AS pct_true
+FROM qualification_results;
+"""
+
 
 
 

@@ -29,10 +29,10 @@ def insert_enrichment_run(conn, company_id:int, company: str) -> int :
     return cursor.fetchone()[0]
 
 
-def insert_qualification_result(conn, company_id, enrichment_run_id, icp_score) -> None : 
+def insert_qualification_result(conn, company_id, enrichment_run_id, icp_score,is_qualified) -> None : 
     conn.execute(
         queries.INSERT_QUALIFICATION_RESULT,
-        (company_id, enrichment_run_id, icp_score)
+        (company_id, enrichment_run_id, icp_score, is_qualified)
     )
 
 
@@ -42,7 +42,7 @@ def get_highest_icp_score(conn) -> list[int] :
         return cursor.fetchall()
 
 
-def get_table(conn, table) -> list[dict]:
+def get_tajble(conn, table) -> list[dict]:
     with conn.cursor() as cursor:
         cursor.execute(f"SELECT * FROM {table};")
         rows = cursor.fetchall()
@@ -68,3 +68,8 @@ def get_duplicate(conn) -> list[str] :
     with conn.cursor() as cursor:
         cursor.execute(queries.GET_DUPLICATE)
         return cursor.fetchall()
+
+def get_qualification_results(conn) -> float : 
+    with conn.cursor() as cursor:
+        cursor.execute(queries.GET_TOTAL_QUALIFICATION)
+        return float(cursor.fetchone()[0])
