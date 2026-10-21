@@ -16,15 +16,11 @@ def insert_company(conn, row) -> int :
 
 def insert_enrichment_run(conn, company_id:int, company: str) -> int :
     #Verifies enrichment (not icp score) 
-    if company["is_qualified"] == "True" or company["is_qualified"] == "False": 
-        result = "success"
-    else:
-        result = "fail"
-
+    result = str(company["is_qualified"]) in ("True", "False") 
 
     cursor = conn.execute(
         queries.INSERT_ENRICHMENT_RUN,
-        (company_id,result,)
+        (company_id,result),
     )
     return cursor.fetchone()[0]
 

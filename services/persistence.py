@@ -76,3 +76,22 @@ def save_results_csv(
             writer.writeheader()
 
         writer.writerow(row)
+
+def company_to_row(company: Company, icp_score) -> dict : 
+    return { 
+            "name": company.name,
+            "domain": company.domain,
+            "industry": company.industry,
+            "employee_count": company.employee_count,
+            "annual_revenue": company.annual_revenue,
+            "year_founded": company.year_founded,
+            "company_type": company.company_type,
+            "description": company.description,
+            "linkedin_url": company.linkedin_url,
+            "city": company.location.city,
+            "state": company.location.state,
+            "country": company.location.country,
+            "enrichment_source": company.enrichment_source,
+            "icp_score": icp_score.score,
+            "is_qualified": icp_score.is_qualified,
+            }
