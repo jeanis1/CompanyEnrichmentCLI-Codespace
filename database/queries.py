@@ -57,7 +57,7 @@ JOIN enrichment_runs e
 WHERE e.result = 'fail'
 """
 
-#Unecessary due to input formatting preventing duplicates, but included as learning challenge.
+#Unecessary due to input filtering, but included as required learning practice.
 GET_DUPLICATE = """
 SELECT LOWER(TRIM(domain)), COUNT(*) AS cnt
 FROM companies
@@ -66,9 +66,25 @@ HAVING COUNT(*) > 1
 ORDER BY cnt DESC;
 """
 
-GET_TOTAL_QUALIFICATION = """
+GET_TOTAL_QUALIFICATION_RATE = """
 SELECT ROUND(100.0 * COUNT(*) FILTER (WHERE is_qualified) / COUNT(*), 2) AS pct_true
 FROM qualification_results;
+"""
+
+GET_BATCH_QUALIFICATION_RATE = """
+SELECT q.is_qualified 
+FROM companies c
+JOIN qualification_results q 
+    on c.id = q.company_id
+WHERE c.domain = ANY(%s)
+"""
+
+GET_PROCESSED_THIS_WEEK = """
+SELECT c.domain
+FROM companies c 
+JOIN enrichment_runs e 
+    on c.id = e.company_id
+WHERE e.started_at >= NOW() - INTERVAL '7 days'
 """
 
 

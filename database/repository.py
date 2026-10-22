@@ -1,5 +1,6 @@
 from . import queries
-import math 
+import pandas as pd
+
 
 def insert_company(conn, row) -> int : 
     domain = row["domain"].strip().lower()
@@ -34,11 +35,11 @@ def insert_qualification_result(conn, company_id, enrichment_run_id, icp_score,i
 
 def get_highest_icp_score(conn) -> list[int] : 
     with conn.cursor() as cursor:
-        cursor.execute(queries.HIGHEST_ICP_SCORE)
+        cursor.execute(queries.GET_HIGHEST_ICP_SCORE)
         return cursor.fetchall()
 
 
-def get_tajble(conn, table) -> list[dict]:
+def get_table(conn, table) -> list[dict]:
     with conn.cursor() as cursor:
         cursor.execute(f"SELECT * FROM {table};")
         rows = cursor.fetchall()
@@ -65,7 +66,22 @@ def get_duplicate(conn) -> list[str] :
         cursor.execute(queries.GET_DUPLICATE)
         return cursor.fetchall()
 
-def get_qualification_results(conn) -> float : 
+def get_total_qualfication(conn) -> float : 
     with conn.cursor() as cursor:
-        cursor.execute(queries.GET_TOTAL_QUALIFICATION)
+        cursor.execute(queries.GET_TOTAL_QUALIFICATION_RATE)
         return float(cursor.fetchone()[0])
+    
+def get_batch_qualification(conn) -> float : 
+    with conn.cursor() as cursor:
+        df = pd.read_csv("data/output/batch_results_most_recent.csv") 
+        domains = df["domain"].tolist()
+        cursor.execute(queries.GET_BATCH_QUALIFICATION_RATE, (domains,))
+        return sum(1 for row in cursor.fetchall() if row[0])
+        
+    
+def get_processed_this_week(conn) -> float : 
+    with conn.cursor() as cursor:
+        cursor.execute(queries.GET_PROCESSED_THIS_WEEK)
+        return cursor.fetchall()
+    
+    

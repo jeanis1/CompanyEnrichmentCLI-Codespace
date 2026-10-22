@@ -8,7 +8,6 @@ from services.company_enrichment import enrich_company_apollo, CompanyEnrichment
 from services.persistence import save_results_json, save_results_csv, company_to_row
 from services.scoring_icp import score_company
 from services.batch_processing import BatchProcessingError, initialize_batch_processing, remove_database_duplication,remove_input_duplication, validate_input, save_batch_summary, output_summary, order_and_rank_batch
-import pandas as pd
 
 from database.init_db import create_tables
 from database.database import get_connection
@@ -18,7 +17,8 @@ from database import repository
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Enrich a company using its domain"
+        description="Enrich a company using its domain",
+        formatter_class=argparse.RawTextHelpFormatter,
     )
 
     group = parser.add_mutually_exclusive_group(required=True)
@@ -36,11 +36,36 @@ def parse_args():
         help=f"CSV file containing domains to process (default : {DEFAULT_BATCH_CSV})",
     )
 
+    
     group.add_argument(
-        "--db",
-        help="Manually process Company from the database.",
+        "--query",
+        choices=[
+            "get-top-icp-score",
+            "get-total-count-industry",
+            "get-list-enrichment-fail",
+            "get-duplicate-domains",
+            "get-qualified-from-all",
+            "get-qualified-from-batch",
+            "get-processed-this-week",
+        ],
+        metavar="QUERY",
+            help=f"Queries Available:\n"
+                " get-top-icp-score\n"
+                " get-total-count-industry\n"
+                " get-list-enrichment-fail\n"
+                " get-duplicate-domains\n"
+                " get-qualified-from-all\n"
+                " get-qualified-from-batch\n"
+                " get-processed-this-week"
     )
-
+    
+    group.add_argument(
+        "--get-specific-industry",
+        type=str,
+        metavar="INDUSTRY_NAME",
+        help="Get companies in specific industry."
+    )
+    
     return parser.parse_args()
 
 def process_single_domain(conn,domain: str, settings : Settings) -> int:
@@ -84,7 +109,7 @@ def process_single_domain(conn,domain: str, settings : Settings) -> int:
             company_id,
             enrichment_id,
             row["icp_score"],
-            row["is_qualified"]",
+            row["is_qualified"],
             )
         conn.commit()
         return 0 
@@ -168,61 +193,6 @@ def process_batch(conn, csv_path:str, settings: Settings) -> int:
     return 0
 
 
-def manual_database_processing(conn, company_name: str,) -> None: 
-
-    company_name = company_name.strip().lower()
-    df = pd.read_csv("data/output/results.csv")
-    match = df[df["name"].str.lower() == company_name.lower()]
-    
-    if match.empty:
-        print(f"Company {company_name} not found.")
-        conn.close()
-        return
-    
-    row = match.iloc[0]
-    company_id = repository.insert_company(conn, row) 
-    run_id = repository.insert_enrichment_run(conn,company_id, row)
-    repository.insert_qualification_result(
-        conn,
-        company_id, 
-        run_id,
-        row["icp_score"],
-        row["is_qualified"],
-    )
-
-    #Get specific industry from DB - WORKING
-    # select_industry_list = repository.get_industry_count(conn, "Computer software")
-    # for row in select_industry_list:
-    #     print(row)
-
-    # Rank Top ICP Scores - WORKING
-    # icp_list = repository.get_highest_icp_score(conn)
-    # for row in icp_list:
-    #     print(row)
-
-    # Get Total Count of All Industry - WORKING
-    # industry_total_list = repository.get_industry_count(conn)
-    # for row in industry_total_list:
-    #     print(row)
-
-    # Get List of enrichment failed - WORKING
-    # failed_list = repository.get_failed(conn)
-    # for row in failed_list:
-    #     print(row)
-
-    # Get Duplicate Name Domains : Should Return None (due to overwrite instead of creation for duplicate domains)
-    # print("Duplicate Items : ")
-    # duplicate_list = repository.get_duplicate(conn)
-    # print(duplicate_list)
-    
-    # Get % Qualified from all accounts in DB 
-    # print("Total Qualified : ")
-    # total_qualfied_list = repository.get_qualification_results(conn)
-    # print(f"{total_qualfied_list}%")
-    
-    conn.commit()
-
-
 
 def main() -> int:
     settings = Settings.from_env()
@@ -233,10 +203,57 @@ def main() -> int:
         args = parse_args()
         if args.csv: 
             return process_batch(conn, args.csv, settings)
-        if args.db:
-            return manual_database_processing(args.db, settings)
+
+        if args.domain:
+            return process_single_domain(conn, args.domain, settings)
+            
+        if args.get_specific_industry:
+            results = repository.get_industry_count(
+                conn, args.get_specific_industry
+            )
+            for row in results:
+                print(row)
+            return
         
-        return process_single_domain(conn, args.domain, settings)
+        
+        match args.query:
+            case "get-specific-industry":
+                select_industry_list = repository.get_industry_count(conn, "Computer software") 
+                for row in select_industry_list:
+                    print(row)
+            
+            case "get-top-icp-score":
+                icp_list = repository.get_highest_icp_score(conn)
+                for row in icp_list:
+                    print(row)
+            
+            case "get-total-count-industry":
+                industry_total_list = repository.get_total_industry_count(conn)
+                for row in industry_total_list:
+                    print(row)
+                    
+            case "get-list-enrichment-fail":
+                failed_list = repository.get_failed(conn)
+                for row in failed_list:
+                    print(row)
+            
+            case "get-duplicate-domains":
+                duplicate_list = repository.get_duplicate(conn)
+                print(duplicate_list)
+            
+            case "get-qualified-from-all":
+                total_qualified_list = repository.get_total_qualfication(conn)
+                print(f"{total_qualified_list}%")
+
+            case "get-qualified-from-batch":
+                batch_qualified_list = repository.get_batch_qualification(conn)
+                print(batch_qualified_list)
+
+            case "get-processed-this-week":
+                processed_this_week_list = repository.get_processed_this_week(conn)
+                print(processed_this_week_list)
+                
+
     finally:
         conn.close()
 
