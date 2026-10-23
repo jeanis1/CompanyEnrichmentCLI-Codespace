@@ -5,14 +5,14 @@ from functools import partial
 from clients.apollo_api import ApolloAPIError, get_company_by_domain_apollo
 from config import Settings
 from services.company_enrichment import enrich_company_apollo, CompanyEnrichmentError
-from services.persistence import save_results_json, save_results_csv, company_to_row
+from services.persistence import save_results_json, save_results_csv, company_to_row,persist_company_result
 from services.scoring_icp import score_company
 from services.batch_processing import BatchProcessingError, initialize_batch_processing, remove_database_duplication,remove_input_duplication, validate_input, save_batch_summary, output_summary, order_and_rank_batch
 
 from database.init_db import create_tables
 from database.database import get_connection
 from database import repository 
-
+import psycopg
 
 
 def parse_args():
@@ -87,6 +87,8 @@ def process_single_domain(conn,domain: str, settings : Settings) -> int:
         icp_score = score_company(company)
         
         #Persistence
+        persist_company_result(conn, company, icp_score)
+        
         save_results_json(
             company, 
             icp_score,
@@ -100,24 +102,17 @@ def process_single_domain(conn,domain: str, settings : Settings) -> int:
             output_dir=settings.output_dir,
             )
         
-        #DB
-        row = company_to_row(company, icp_score) 
-        company_id = repository.insert_company(conn,row)
-        enrichment_id = repository.insert_enrichment_run(conn,company_id, row)
-        repository.insert_qualification_result(
-            conn,
-            company_id,
-            enrichment_id,
-            row["icp_score"],
-            row["is_qualified"],
-            )
-        conn.commit()
         return 0 
     
     except (ApolloAPIError, CompanyEnrichmentError) as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 1 
-
+    except psycopg.Error as exc:
+        print(
+            f"Database persistence failed: {type(exc).__name__}", 
+            file=sys.stderr,
+        )
+        return 1 
 
 
 def process_batch(conn, csv_path:str, settings: Settings) -> int: 
@@ -142,7 +137,6 @@ def process_batch(conn, csv_path:str, settings: Settings) -> int:
         get_company_by_domain_apollo,
         api_key=settings.apollo_api_key,
     )
-    conn = get_connection(settings.database_url)
     
     for entry in batch: 
         domain = entry["domain"]
@@ -154,6 +148,9 @@ def process_batch(conn, csv_path:str, settings: Settings) -> int:
                 )
 
                 icp_score = score_company(company)
+                
+                persist_company_result(conn, company, icp_score)
+                
                 entry["icp_score"] = icp_score.score
                 entry["status"] = "SUCCESS"
 
@@ -168,18 +165,7 @@ def process_batch(conn, csv_path:str, settings: Settings) -> int:
                     output_dir=settings.output_dir,
                 )
 
-                #DB Persistence
-                row = company_to_row(company, icp_score) 
-                company_id = repository.insert_company(conn,row)
-                enrichment_id = repository.insert_enrichment_run(conn,company_id, row)
-                repository.insert_qualification_result(
-                    conn,
-                    company_id,
-                    enrichment_id,
-                    row["icp_score"],
-                    row["is_qualified"],
-                    )
-                conn.commit()
+                
 
             except Exception as e:
                 entry["status"] = "FAIL"
@@ -196,8 +182,7 @@ def process_batch(conn, csv_path:str, settings: Settings) -> int:
 
 def main() -> int:
     settings = Settings.from_env()
-    conn = get_connection(settings.database_url)
-    try:
+    with get_connection(settings.database_url) as conn:
         create_tables(conn)
 
         args = parse_args()
@@ -254,8 +239,6 @@ def main() -> int:
                 print(processed_this_week_list)
                 
 
-    finally:
-        conn.close()
 
 # Entry-point validation
 if __name__ == "__main__":

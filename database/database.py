@@ -5,13 +5,11 @@ class DatabaseConnectionError(Exception):
     pass
 
 def get_connection(database_url: str) -> Connection: 
-    try:
         return psycopg.connect(
             database_url,
+            autocommit=True,
             connect_timeout=5,
+            options="-c statement_timeout=10000 -c lock_timeout=3000",
         )
 
-    except psycopg.OperationalError as exc:
-        raise DatabaseConnectionError(
-            "Unable to conntect to PostgreSQL."
-        ) from exc
+ 

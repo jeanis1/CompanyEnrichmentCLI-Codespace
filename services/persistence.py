@@ -4,6 +4,8 @@ from pathlib import Path
 
 from models.company import Company
 from models.icp import ICPScore
+from database import repository
+
 
 DEFAULT_OUTPUT_DIR = Path("data/output")
 
@@ -95,3 +97,23 @@ def company_to_row(company: Company, icp_score) -> dict :
             "icp_score": icp_score.score,
             "is_qualified": icp_score.is_qualified,
             }
+    
+def persist_company_result(conn, company, icp_score) -> int:  
+    row = company_to_row(company, icp_score)
+    
+    with conn.transaction():
+        company_id = repository.insert_company(conn, row)
+        
+        enrichment_id = repository.insert_enrichment_run(
+            conn, company_id, row
+        )
+        
+        repository.insert_qualification_result(
+            conn,
+            company_id,
+            enrichment_id,
+            row["icp_score"],
+            row["is_qualified"],
+        )
+        
+        return enrichment_id
