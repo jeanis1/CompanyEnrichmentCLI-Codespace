@@ -74,7 +74,7 @@ def validate_input(batch: list[dict]) -> list[dict]:
         if pd.isna(source) or not isinstance(source, str) or not source.strip():
             entry["status"] = "FAIL"
             entry["error_type"] = "Source Missing"
-            entry["error_message"] = f"Source is missing: {domain}"
+            entry["error_message"] = f"Source is missing: {entry['domain']}"
     return batch    
 
 
@@ -161,9 +161,9 @@ def output_summary(results:list[dict]) -> None:
     total_rows = len(results)
     # Valid input (not API called)
     valid_rows = (
-                sum(1 for entry in results if entry["status"] is "SUCCESS") 
-                + sum(1 for entry in results if entry["status"] is "FAIL" and 
-                entry["error_type"] is "CompanyEnrichmentError"
+                sum(1 for entry in results if entry["status"] == "SUCCESS") 
+                + sum(1 for entry in results if entry["status"] == "FAIL" and 
+                entry["error_type"] == "CompanyEnrichmentError"
     ))
     
     # How many domain API calls were successful

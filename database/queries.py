@@ -8,13 +8,6 @@ DO UPDATE SET
 RETURNING id;
 """
 
-INSERT_ENRICHMENT_RUN = """
-INSERT INTO enrichment_runs(company_id, result)
-VALUES (%s,%s)
-RETURNING id;
-"""
-
-
 INSERT_QUALIFICATION_RESULT =  """
 INSERT INTO qualification_results(company_id, enrichment_run_id, icp_score, is_qualified)
 VALUES(%s, %s, %s, %s)
@@ -49,14 +42,6 @@ WHERE c.industry = %s
 ORDER BY q.icp_score DESC;
 """
 
-GET_FAILED = """
-SELECT c.name, c.domain
-FROM companies c
-JOIN enrichment_runs e
-    ON c.id = e.company_id
-WHERE e.result = 'fail'
-"""
-
 #Unecessary due to input filtering, but included as required learning practice.
 GET_DUPLICATE = """
 SELECT LOWER(TRIM(domain)), COUNT(*) AS cnt
@@ -85,6 +70,21 @@ FROM companies c
 JOIN enrichment_runs e 
     on c.id = e.company_id
 WHERE e.started_at >= NOW() - INTERVAL '7 days'
+"""
+
+GET_FAILED_RUNS = """
+SELECT id, requested_domain, error_code, finished_at
+FROM enrichment_runs 
+WHERE status = 'failed'
+ORDER BY finished_at DESC;
+"""
+
+GET_POTENTIALLY_INTERRUPTED_RUNS = """
+SELECT id, requested_domain, started_at
+FROM enrichment_runs
+WHERE status = 'running'
+    AND started_at < NOW() - (%s * INTERVAL '1 minute')
+oRDER BY started_at;
 """
 
 

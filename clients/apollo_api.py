@@ -47,9 +47,6 @@ def get_company_by_domain_apollo(
                 timeout=10
                 )
 
-            print(response.text)
-            # print("STATUS:", response.status_code)
-            # print("BODY:", response.text)
             # -----------------------
             # Retry temporary HTTP failures
             # -----------------------

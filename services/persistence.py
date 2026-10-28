@@ -1,5 +1,6 @@
 import csv
 import json
+import sys
 from pathlib import Path
 
 from models.company import Company
@@ -98,22 +99,52 @@ def company_to_row(company: Company, icp_score) -> dict :
             "is_qualified": icp_score.is_qualified,
             }
     
-def persist_company_result(conn, company, icp_score) -> int:  
+def persist_company_result(
+    conn, 
+    run_id,
+    company,
+    icp_score
+) -> int:  
     row = company_to_row(company, icp_score)
     
     with conn.transaction():
         company_id = repository.insert_company(conn, row)
         
-        enrichment_id = repository.insert_enrichment_run(
-            conn, company_id, row
+        repository.complete_enrichment_run(
+            conn,
+            run_id,
+            company_id,
+            icp_score.is_qualified,
         )
         
         repository.insert_qualification_result(
             conn,
             company_id,
-            enrichment_id,
+            run_id,
             row["icp_score"],
             row["is_qualified"],
         )
         
-        return enrichment_id
+        return run_id
+
+
+def save_output_files(company, icp_score, output_dir) -> None: 
+    """
+    JSON/CSV files are derived from database.
+    A write failure must not fail a committed run.
+    """
+    try: 
+        save_results_json(
+            company,
+            icp_score,
+            filename=f"{company.domain}.json",
+            output_dir=output_dir,
+        )
+        save_results_csv(company, icp_score, output_dir=output_dir)
+    except OSError as exc:
+        print(
+            f"Warning: saved to database but could not write output files for "
+            f"{company.domain}:{type(exc).__name__}",
+            file=sys.stderr,
+        )
+        

@@ -15,17 +15,6 @@ def insert_company(conn, row) -> int :
     return cursor.fetchone()[0]
 
 
-def insert_enrichment_run(conn, company_id:int, company: str) -> int :
-    #Verifies enrichment (not icp score) 
-    result = str(company["is_qualified"]) in ("True", "False") 
-
-    cursor = conn.execute(
-        queries.INSERT_ENRICHMENT_RUN,
-        (company_id,result),
-    )
-    return cursor.fetchone()[0]
-
-
 def insert_qualification_result(conn, company_id, enrichment_run_id, icp_score,is_qualified) -> None : 
     conn.execute(
         queries.INSERT_QUALIFICATION_RESULT,
@@ -38,14 +27,6 @@ def get_highest_icp_score(conn) -> list[int] :
         cursor.execute(queries.GET_HIGHEST_ICP_SCORE)
         return cursor.fetchall()
 
-
-def get_table(conn, table) -> list[dict]:
-    with conn.cursor() as cursor:
-        cursor.execute(f"SELECT * FROM {table};")
-        rows = cursor.fetchall()
-        columns = [desc[0] for desc in cursor.description]
-        return [dict(zip(columns, row)) for row in rows]
-
 def get_total_industry_count(conn) -> list[int] :
     with conn.cursor() as cursor:
         cursor.execute(queries.GET_ALL_INDUSTRY_COUNT)
@@ -54,11 +35,6 @@ def get_total_industry_count(conn) -> list[int] :
 def get_industry_count(conn, industry) -> list[str] :
     with conn.cursor() as cursor:
         cursor.execute(queries.GET_THIS_INDUSTRY, (industry,))
-        return cursor.fetchall()
-
-def get_failed(conn) -> list[str] : 
-    with conn.cursor() as cursor:
-        cursor.execute(queries.GET_FAILED)
         return cursor.fetchall()
 
 def get_duplicate(conn) -> list[str] : 
@@ -83,5 +59,75 @@ def get_processed_this_week(conn) -> float :
     with conn.cursor() as cursor:
         cursor.execute(queries.GET_PROCESSED_THIS_WEEK)
         return cursor.fetchall()
+    
+
+def start_enrichment_run(conn, domain:str) -> int:
+    cursor = conn.execute(
+        """
+        INSERT INTO enrichment_runs(
+            requested_domain,
+            status
+        )
+        VALUES (%s, 'running')
+        RETURNING id
+        """,
+        (domain,),
+    )
+    return cursor.fetchone()[0]
+
+def complete_enrichment_run(
+    conn,
+    run_id: int, 
+    company_id: int,
+    is_qualified: bool,
+) -> None:
+    cursor = conn.execute(
+        """
+        UPDATE enrichment_runs
+        SET company_id = %s,
+            status = 'succeeded',
+            result = %s,
+            finished_at = NOW(),
+            error_code = NULL
+        WHERE id = %s
+            AND status = 'running'
+        RETURNING id
+        """,
+        (company_id, is_qualified, run_id),
+    )
+        
+    if cursor.fetchone() is None:
+            raise ValueError("Run does not exist or is no longer running.")
+        
+def fail_enrichment_run(
+    conn, 
+    run_id: int,
+    error_code: str,
+) -> None:
+    cursor = conn.execute(
+        """
+        UPDATE enrichment_runs
+        SET status = 'failed',
+            result = NULL,
+            error_code = %s,
+            finished_at = NOW()
+        WHERE id = %s 
+            AND status = 'running'
+        RETURNING id
+        """,
+        (error_code, run_id),
+    )
+    
+    if cursor.fetchone() is None:
+        raise ValueError("Run does not exist or is no longer running")
+    
+def get_failed_runs(conn):
+    return conn.execute(queries.GET_FAILED_RUNS).fetchall()
+
+def get_potentially_interrupted_runs(conn, minutes=15):
+    return conn.execute(
+        queries.GET_POTENTIALLY_INTERRUPTED_RUNS,
+        (minutes,),
+    ).fetchall()
     
     

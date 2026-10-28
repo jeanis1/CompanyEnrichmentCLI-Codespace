@@ -1,7 +1,13 @@
 import pytest
+import os
+import psycopg
 
+from dotenv import load_dotenv
+from pathlib import Path
 from models.company import Company, CompanyLocation
 from models.icp import ICPScore
+
+load_dotenv()
 
 @pytest.fixture 
 def qualified_company() -> Company:
@@ -30,3 +36,27 @@ def qualified_score() -> ICPScore:
         revenue_score=20,
         is_qualified=True,
     )
+    
+@pytest.fixture 
+def conn():
+    #Real PostgreSQL connection toa throaway test database. Never DATABASE_URL 
+    url = os.getenv("TEST_DATABASE_URL")
+    if not url:
+        pytest.skip("TEST_DATABASE_URL not set")
+    with psycopg.connect(url, autocommit=True) as conn:
+        conn.execute(Path("database/schema.sql").read_text())
+        conn.execute(
+            "TRUNCATE qualification_results, enrichment_runs, companies "
+            "RESTART IDENTITY CASCADE"
+        )
+        yield conn
+            
+
+@pytest.fixture
+def apollo_payload():
+    return {"organization": {
+        "name": "OpenAI", "industry": "Technology",
+        "estimated_num_employees": 1500, "annual_revenue": 20_000_000,
+        "city": "San Francisco","state": "California", "country": "United States",
+    }}
+    
