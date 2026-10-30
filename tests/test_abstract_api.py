@@ -6,6 +6,7 @@ import requests
 from clients import abstract_api
 from clients.abstract_api import AbstractAPIError
 
+
 def test_successful_request(monkeypatch):
     fake_response = Mock()
     fake_response.status_code = 200
