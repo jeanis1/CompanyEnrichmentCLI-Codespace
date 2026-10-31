@@ -1,18 +1,13 @@
 import pandas as pd
-import re 
 
 from pathlib import Path
 from config import Settings
 from datetime import datetime
-
-DOMAIN_PATTERN = re.compile(
-    r"^(?=.{1,253}$)([A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,63}$"
-)
+from services.domains import normalize_domain
 
 
 class BatchProcessingError(Exception):
     pass
-
 
 
 def initialize_batch_processing(csv_path: str) -> list[dict]:
@@ -22,36 +17,29 @@ def initialize_batch_processing(csv_path: str) -> list[dict]:
 
         results = []
 
-        for row_number, (_, row) in enumerate(df.iterrows(), start=1): 
-            domain  = row["domain"]
+        for row_number, (_, row) in enumerate(df.iterrows(), start=1):
+            domain = row["domain"]
             source = row["source"]
-            # normalize input
-            if isinstance(domain, str): 
-                domain = domain.strip().lower()
 
             result = {
-                    "row_number": row_number,
-                    "domain": domain,
-                    "source": source,
-                    "status": None,
-                    "icp_score": None,
-                    "qualification": None,
-                    "error_type": None,
-                    "error_message": None,
-                }
+                "row_number": row_number,
+                "domain": row["domain"],
+                "source": source["source"],
+                "status": None,
+                "icp_score": None,
+                "qualification": None,
+                "error_type": None,
+                "error_message": None,
+            }
             results.append(result)
         return results
-    
+
     except FileNotFoundError as exc:
-        raise BatchProcessingError(
-            f"CSV file not found: {exc}"
-            ) from exc
+        raise BatchProcessingError(f"CSV file not found: {exc}") from exc
 
     except pd.errors.EmptyDataError as exc:
-        raise BatchProcessingError(
-            f"CSV file is empty: {exc}"
-        ) from exc
-    
+        raise BatchProcessingError(f"CSV file is empty: {exc}") from exc
+
     except KeyError as exc:
         raise BatchProcessingError(
             f"CSV file is missing required columns: {exc}"
@@ -59,24 +47,22 @@ def initialize_batch_processing(csv_path: str) -> list[dict]:
 
 
 def validate_input(batch: list[dict]) -> list[dict]:
-    for entry in batch :
+    for entry in batch:
         domain = entry["domain"]
-        if ( not isinstance(domain, str) 
-            or not domain.strip()
-            or not DOMAIN_PATTERN.fullmatch(domain.strip())
-        ) : 
+        try:
+            entry["domain"] = normalize_domain(domain)
+        except ValueError:
             entry["status"] = "FAIL"
             entry["error_type"] = "Invalid Domain"
             entry["error_message"] = f"Domain is not a valid string: {domain}"
 
-    for entry in batch :
+    for entry in batch:
         source = entry["source"]
         if pd.isna(source) or not isinstance(source, str) or not source.strip():
             entry["status"] = "FAIL"
             entry["error_type"] = "Source Missing"
             entry["error_message"] = f"Source is missing: {entry['domain']}"
-    return batch    
-
+    return batch
 
 
 def remove_input_duplication(batch: list[dict]) -> list[dict]:
@@ -87,7 +73,7 @@ def remove_input_duplication(batch: list[dict]) -> list[dict]:
             continue
 
         domain = entry["domain"]
-        
+
         if domain in seen_domains:
             entry["status"] = "FAIL"
             entry["error_type"] = "Input Duplicate"
@@ -106,14 +92,9 @@ def remove_database_duplication(batch: list[dict]) -> list[dict]:
 
     df = pd.read_csv(database)
 
-    existing_domains = set(
-        df["domain"]
-            .dropna()
-            .str.strip()
-            .str.lower()
-        )
+    existing_domains = set(df["domain"].dropna().str.strip().str.lower())
 
-    for entry in batch: 
+    for entry in batch:
         if entry["status"] == "FAIL":
             continue
 
@@ -126,27 +107,22 @@ def remove_database_duplication(batch: list[dict]) -> list[dict]:
     return batch
 
 
-def order_and_rank_batch(batch:list[dict]) -> list[dict]:
-    for entry in batch: 
+def order_and_rank_batch(batch: list[dict]) -> list[dict]:
+    for entry in batch:
         if entry["status"] == "FAIL":
             entry["icp_score"] = 0
     ordered_batch = sorted(
-        batch, 
-        key=lambda entry: (
-            entry["icp_score"]
-            if entry["icp_score"] is not None
-            else 0
-        ), 
-        reverse = True,
+        batch,
+        key=lambda entry: (entry["icp_score"] if entry["icp_score"] is not None else 0),
+        reverse=True,
     )
     print(ordered_batch)
-    return ordered_batch 
+    return ordered_batch
 
 
-
-def save_batch_summary(results:list[dict]) -> None:
+def save_batch_summary(results: list[dict]) -> None:
     results_df = pd.DataFrame(results)
-    # Log Batch 
+    # Log Batch
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     settings = Settings.from_env()
     output_path = settings.output_dir / f"batch-results_{timestamp}.csv"
@@ -156,16 +132,15 @@ def save_batch_summary(results:list[dict]) -> None:
     results_df.to_csv(recent_path, index=False)
 
 
-
-def output_summary(results:list[dict]) -> None:
+def output_summary(results: list[dict]) -> None:
     total_rows = len(results)
     # Valid input (not API called)
-    valid_rows = (
-                sum(1 for entry in results if entry["status"] == "SUCCESS") 
-                + sum(1 for entry in results if entry["status"] == "FAIL" and 
-                entry["error_type"] == "CompanyEnrichmentError"
-    ))
-    
+    valid_rows = sum(1 for entry in results if entry["status"] == "SUCCESS") + sum(
+        1
+        for entry in results
+        if entry["status"] == "FAIL" and entry["error_type"] == "CompanyEnrichmentError"
+    )
+
     # How many domain API calls were successful
     success_rows = sum(1 for entry in results if entry["status"] == "SUCCESS")
     fail_rows = sum(1 for entry in results if entry["status"] == "FAIL")
@@ -175,6 +150,3 @@ def output_summary(results:list[dict]) -> None:
     print(f"Valid unique accounts processed: {valid_rows}")
     print(f"Failures: {fail_rows}")
     print(f"Successfully enriched: {success_rows}")
-    
-
-  

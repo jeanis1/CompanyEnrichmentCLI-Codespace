@@ -5,13 +5,12 @@ from clients.apollo_api import ApolloAPIError
 from database import repository
 from services.company_processing import process_company
 
-
 def count(conn, table):
     return conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
 
 
 def test_success_writes_company_run_and_score(conn, apollo_payload):
-    process_company(conn, "openai.com", lambda d: apollo_payload)
+    process_company(conn, "http://www.OpenAI.com", lambda d: apollo_payload)
     assert conn.execute(
         "SELECT status, requested_domain FROM enrichment_runs"
     ).fetchone() == ("succeeded", "openai.com")
@@ -72,3 +71,8 @@ def test_stale_runs_are_failed(conn):
         ("openai.com", "failed", "interrupted"),
         ("stripe.com", "running", None),
     ]
+
+def test_invalid_domain_creates_no_run(conn):
+    with pytest.raises(ValueError):
+        process_company(conn, "not a domain", lambda d: {})
+    assert count(conn, "enrichment_runs") == 0

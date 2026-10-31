@@ -27,6 +27,7 @@ from services.persistence import (
     save_output_files,
 )
 from services.scoring_icp import score_company
+from pydantic import ValidationError
 
 
 def parse_args():
@@ -90,6 +91,13 @@ def process_single_domain(conn, domain: str, settings: Settings) -> int:
     try:
         company, icp_score = process_company(conn, domain, fetch_company)
     except (ApolloAPIError, CompanyEnrichmentError) as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
+    except ValidationError:
+        # checked before ValueError(parent) as message can contain provider data
+        print("Error: Provider returned invalid company data.", file=sys.stderr)
+        return 1
+    except ValueError as exc: #Invalid data
         print(f"Error: {exc}", file=sys.stderr)
         return 1
     except psycopg.Error as exc:

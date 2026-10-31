@@ -3,7 +3,7 @@ import pandas as pd
 
 
 def insert_company(conn, row) -> int:
-    domain = row["domain"].strip().lower()
+    domain = row["domain"]
     cursor = conn.execute(
         queries.INSERT_COMPANY,
         (

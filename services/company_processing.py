@@ -11,12 +11,15 @@ from services.company_enrichment import (
 )
 from services.persistence import persist_company_result
 from services.scoring_icp import score_company
+from services.domains import normalize_domain
 
 logger = logging.getLogger(__name__)
 
 
 def process_company(conn, domain, fetch_company):
-    domain = domain.strip().lower()
+    domain = normalize_domain(
+        domain
+    )  # ValueError for invalid input then no run created
     run_id = repository.start_enrichment_run(conn, domain)
     try:
         company = enrich_company_apollo(domain, fetch_company)
