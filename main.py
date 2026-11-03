@@ -8,7 +8,6 @@ from clients.apollo_api import ApolloAPIError, get_company_by_domain_apollo
 from config import Settings
 from database import repository
 from database.database import get_connection
-from database.init_db import create_tables
 from services.batch_processing import (
     BatchProcessingError,
     initialize_batch_processing,
@@ -158,7 +157,6 @@ def main() -> int:
     settings = Settings.from_env()
 
     with get_connection(settings.database_url) as conn:
-        create_tables(conn)
         if args.csv or args.domain:
             repository.fail_stale_runs(
                 conn

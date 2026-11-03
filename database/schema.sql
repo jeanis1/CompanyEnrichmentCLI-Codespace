@@ -2,7 +2,9 @@ CREATE TABLE IF NOT EXISTS companies (
     id BIGSERIAL PRIMARY KEY,
     name TEXT NOT NULL, 
     domain TEXT NOT NULL UNIQUE,
-    industry TEXT
+    industry TEXT,
+    CONSTRAINT companies_domain_canonical
+        CHECK (domain <> '' AND domain = LOWER(BTRIM(domain)))
 );
 
 
@@ -55,8 +57,17 @@ CREATE TABLE IF NOT EXISTS enrichment_runs (
 
 CREATE TABLE IF NOT EXISTS qualification_results (
     id BIGSERIAL PRIMARY KEY,
-    company_id BIGINT REFERENCES companies(id) NOT NULL,
-    enrichment_run_id BIGINT REFERENCES enrichment_runs(id),
-    icp_score INTEGER,
-    is_qualified BOOLEAN
+    company_id BIGINT NOT NULL REFERENCES companies(id),
+    enrichment_run_id BIGINT NOT NULL REFERENCES enrichment_runs(id),
+    icp_score INTEGER NOT NULL CHECK(icp_score BETWEEN 0 AND 100),
+    is_qualified BOOLEAN NOT NULL
 );
+
+--Overlapping invocation cannot enrich same domain at same time.
+CREATE UNIQUE INDEX IF NOT EXISTS enrichment_runs_one_running_per_domain
+    ON enrichment_runs (requested_domain) WHERE status = 'running';
+
+
+CREATE INDEX IF NOT EXISTS enrichment_runs_company_id_idx ON enrichment_runs(company_id);
+CREATE INDEX IF NOT EXISTS enrichment_runs_status_started_idx ON enrichment_runs (status, started_at);
+CREATE INDEX IF NOT EXISTS qualification_results_company_id_idx ON qualification_results(company_id);

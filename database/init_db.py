@@ -7,3 +7,11 @@ def create_tables(conn) -> None:
         cursor.execute(schema)
 
     conn.commit()
+    
+if __name__ == "__main__":
+    from config import Settings
+    from database.database import get_connection
+
+    with get_connection(Settings.from_env().database_url) as conn:
+        create_tables(conn)
+    print("Tables created.")
