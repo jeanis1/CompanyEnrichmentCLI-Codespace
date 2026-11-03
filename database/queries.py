@@ -1,14 +1,13 @@
 INSERT_COMPANY = """
 INSERT INTO companies (name, domain, industry)
 VALUES (%s, %s, %s)
-ON CONFLICT (domain)
-DO UPDATE SET
+ON CONFLICT (domain) DO UPDATE SET
     name = EXCLUDED.name,
-    industry = EXCLUDED.industry
+    industry = COALESCE(EXCLUDED.industry, companies.industry)
 RETURNING id;
 """
 
-INSERT_QUALIFICATION_RESULT =  """
+INSERT_QUALIFICATION_RESULT = """
 INSERT INTO qualification_results(company_id, enrichment_run_id, icp_score, is_qualified)
 VALUES(%s, %s, %s, %s)
 RETURNING id;
@@ -42,7 +41,7 @@ WHERE c.industry = %s
 ORDER BY q.icp_score DESC;
 """
 
-#Unecessary due to input filtering, but included as required learning practice.
+# Unecessary due to input filtering, but included as required learning practice.
 GET_DUPLICATE = """
 SELECT LOWER(TRIM(domain)), COUNT(*) AS cnt
 FROM companies
@@ -86,9 +85,3 @@ WHERE status = 'running'
     AND started_at < NOW() - (%s * INTERVAL '1 minute')
 oRDER BY started_at;
 """
-
-
-
-
-
-

@@ -4,6 +4,7 @@ import pytest
 from clients.apollo_api import ApolloAPIError
 from database import repository
 from services.company_processing import process_company
+from database.queries import INSERT_COMPANY
 
 def count(conn, table):
     return conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
@@ -34,8 +35,7 @@ def test_provider_failure_is_recorded(conn):
 
     assert conn.execute(
         "SELECT status, error_code FROM enrichment_runs"
-    ).fetchone() == (
-        "failed", "provider_server_error")
+    ).fetchone() == ("failed", "provider_server_error")
     assert count(conn, "companies") == 0
 
 
@@ -72,7 +72,19 @@ def test_stale_runs_are_failed(conn):
         ("stripe.com", "running", None),
     ]
 
+
 def test_invalid_domain_creates_no_run(conn):
     with pytest.raises(ValueError):
         process_company(conn, "not a domain", lambda d: {})
     assert count(conn, "enrichment_runs") == 0
+
+
+def test_upsert_does_not_overwrite_with_null(conn):
+    conn.execute(INSERT_COMPANY, ("AMD", "amd.com", "semiconductors"))
+    conn.execute(INSERT_COMPANY, ("AMD", "amd.com", None))
+    row = conn.execute(
+        "SELECT name, industry FROM companies WHERE domain = %s",
+        ("amd.com",)
+    ).fetchone()
+
+    assert row == ("AMD", "semiconductors")
