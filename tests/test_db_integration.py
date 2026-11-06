@@ -86,5 +86,4 @@ def test_upsert_does_not_overwrite_with_null(conn):
         "SELECT name, industry FROM companies WHERE domain = %s",
         ("amd.com",)
     ).fetchone()
-
     assert row == ("AMD", "semiconductors")

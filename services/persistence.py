@@ -7,7 +7,6 @@ from models.company import Company
 from models.icp import ICPScore
 from database import repository
 
-
 DEFAULT_OUTPUT_DIR = Path("data/output")
 
 def save_results_json(

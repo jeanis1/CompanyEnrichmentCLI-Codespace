@@ -18,13 +18,10 @@ def initialize_batch_processing(csv_path: str) -> list[dict]:
         results = []
 
         for row_number, (_, row) in enumerate(df.iterrows(), start=1):
-            domain = row["domain"]
-            source = row["source"]
-
             result = {
                 "row_number": row_number,
                 "domain": row["domain"],
-                "source": source["source"],
+                "source": row["source"],
                 "status": None,
                 "icp_score": None,
                 "qualification": None,
@@ -144,9 +141,11 @@ def output_summary(results: list[dict]) -> None:
     # How many domain API calls were successful
     success_rows = sum(1 for entry in results if entry["status"] == "SUCCESS")
     fail_rows = sum(1 for entry in results if entry["status"] == "FAIL")
+    skipped_rows = sum(1 for entry in results if entry["status"] == "SKIPPED")
 
     print("\nBatch Processing Summary:")
     print(f"Total input rows: {total_rows}")
     print(f"Valid unique accounts processed: {valid_rows}")
     print(f"Failures: {fail_rows}")
+    print(f"Skipped: {skipped_rows}")
     print(f"Successfully enriched: {success_rows}")
