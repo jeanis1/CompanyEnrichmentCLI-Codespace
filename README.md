@@ -210,3 +210,10 @@ Planned batch tests include:
 * Partial-failure continuation
 * ICP ranking
 
+#  Production design
+* Failure model: API down, DB down, crash, uncertain commit
+* Consistency: one transaction; provider calls outside it; files after commit
+* Idempotency: UNIQUE(domain) + upsert, UNIQUE(enrichment_run_id), one running run per domain, 30-day skip
+* Data quality: normalize_domain() + CHECK, COALESCE upserts, only codes stored
+* Cost controls: freshness skip, --max-calls
+* Deliberately not built, and when each item would be needed
