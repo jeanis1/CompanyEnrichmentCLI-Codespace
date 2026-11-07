@@ -155,3 +155,13 @@ def fail_stale_runs(conn, minutes: int = 15) -> int:
         (minutes,),
     )
     return cursor.rowcount
+
+
+def get_recently_enriched(conn, domains: list[str], days: int = 30) -> set[str]:
+    rows = conn.execute("""
+        SELECT DISTINCT requested_domain FROM enrichment_runs
+        WHERE status = 'succeeded'
+            AND requested_domain = ANY(%s)
+            AND finished_at > NOW() - make_interval(days => %s)
+        """, (domains, days)).fetchall()
+    return {row[0] for row in rows}

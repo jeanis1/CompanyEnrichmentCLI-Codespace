@@ -13,19 +13,14 @@ from services.batch_processing import (
     initialize_batch_processing,
     order_and_rank_batch,
     output_summary,
-    remove_database_duplication,
+    skip_recently_enriched,
     remove_input_duplication,
     save_batch_summary,
     validate_input,
 )
 from services.company_enrichment import CompanyEnrichmentError, enrich_company_apollo
 from services.company_processing import process_company
-from services.persistence import (
-    company_to_row,
-    persist_company_result,
-    save_output_files,
-)
-from services.scoring_icp import score_company
+from services.persistence import save_output_files
 from pydantic import ValidationError
 
 # Provider errors that suggest apollo is strugging (not this one domain)
@@ -181,7 +176,6 @@ def process_batch(
         batch = initialize_batch_processing(csv_path)
         batch = validate_input(batch)
         batch = remove_input_duplication(batch)
-        batch = remove_database_duplication(batch)
 
     except BatchProcessingError as exc:
         print(f"Error: {exc}", file=sys.stderr)
@@ -192,6 +186,8 @@ def process_batch(
         conn.close()
         return
 
+    batch = skip_recently_enriched(conn, batch)
+    
     fetch_company = partial(
         get_company_by_domain_apollo,
         api_key=settings.apollo_api_key,

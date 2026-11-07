@@ -1,9 +1,9 @@
 import pandas as pd
 
-from pathlib import Path
 from config import Settings
 from datetime import datetime
 from services.domains import normalize_domain
+from database import repository
 
 
 class BatchProcessingError(Exception):
@@ -81,26 +81,18 @@ def remove_input_duplication(batch: list[dict]) -> list[dict]:
     return batch
 
 
-def remove_database_duplication(batch: list[dict]) -> list[dict]:
-    database = Path("data/output/results.csv")
-
-    if not database.exists():
+def skip_recently_enriched(conn, batch: list[dict], days: int = 30) -> list[dict]:
+    # Skip domains already enriched successfully in the last threshold days (saves API calls)
+    domains = [entry["domain"] for entry in batch if entry["status"] is None]
+    if not domains:
         return batch
 
-    df = pd.read_csv(database)
-
-    existing_domains = set(df["domain"].dropna().str.strip().str.lower())
+    recent = repository.get_recently_enriched(conn, domains, days)
 
     for entry in batch:
-        if entry["status"] == "FAIL":
-            continue
-
-        domain = entry["domain"]
-
-        if domain in existing_domains:
-            entry["status"] = "FAIL"
-            entry["error_type"] = "Database Duplicate"
-            entry["error_message"] = f"Domain {domain} already exists in the database."
+        if entry["status"] is None and entry["domain"] in recent:
+            entry["status"] = "SKIPPED"
+            entry["error_type"] = "recently_enriched"
     return batch
 
 

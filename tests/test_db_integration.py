@@ -5,6 +5,8 @@ from clients.apollo_api import ApolloAPIError
 from database import repository
 from services.company_processing import process_company
 from database.queries import INSERT_COMPANY
+from database.repository import get_recently_enriched
+
 
 def count(conn, table):
     return conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
@@ -83,7 +85,20 @@ def test_upsert_does_not_overwrite_with_null(conn):
     conn.execute(INSERT_COMPANY, ("AMD", "amd.com", "semiconductors"))
     conn.execute(INSERT_COMPANY, ("AMD", "amd.com", None))
     row = conn.execute(
-        "SELECT name, industry FROM companies WHERE domain = %s",
-        ("amd.com",)
+        "SELECT name, industry FROM companies WHERE domain = %s", ("amd.com",)
     ).fetchone()
     assert row == ("AMD", "semiconductors")
+
+
+def test_recently_enriched_domains_are_returned(conn, apollo_payload):
+    def fail(domain):
+        raise ApolloAPIError("down")
+
+    process_company(conn, "openai.com", lambda d: apollo_payload)
+    with pytest.raises(ApolloAPIError):
+        process_company(conn, "stripe.com", fail)
+
+    recent = repository.get_recently_enriched(
+        conn, ["openai.com", "stripe.com", "nike.com"]
+    )
+    assert recent == {"openai.com"}
