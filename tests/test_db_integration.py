@@ -3,7 +3,7 @@ import pytest
 
 from clients.apollo_api import ApolloAPIError
 from database import repository
-from services.company_processing import process_company
+from services.company_processing import enrich_score_qualify
 from database.queries import INSERT_COMPANY
 from database.repository import get_recently_enriched
 
@@ -13,7 +13,7 @@ def count(conn, table):
 
 
 def test_success_writes_company_run_and_score(conn, apollo_payload):
-    process_company(conn, "http://www.OpenAI.com", lambda d: apollo_payload)
+    enrich_score_qualify(conn, "http://www.OpenAI.com", lambda d: apollo_payload)
     assert conn.execute(
         "SELECT status, requested_domain FROM enrichment_runs"
     ).fetchone() == ("succeeded", "openai.com")
@@ -22,8 +22,8 @@ def test_success_writes_company_run_and_score(conn, apollo_payload):
 
 
 def test_rerun_does_not_duplicate_company(conn, apollo_payload):
-    process_company(conn, "openai.com", lambda d: apollo_payload)
-    process_company(conn, "openai.com", lambda d: apollo_payload)
+    enrich_score_qualify(conn, "openai.com", lambda d: apollo_payload)
+    enrich_score_qualify(conn, "openai.com", lambda d: apollo_payload)
     assert count(conn, "companies") == 1
     assert count(conn, "enrichment_runs") == 2
 
@@ -33,7 +33,7 @@ def test_provider_failure_is_recorded(conn):
         raise ApolloAPIError("down", code="server_error")
 
     with pytest.raises(ApolloAPIError):
-        process_company(conn, "openai.com", fail)
+        enrich_score_qualify(conn, "openai.com", fail)
 
     assert conn.execute(
         "SELECT status, error_code FROM enrichment_runs"
@@ -50,7 +50,7 @@ def test_db_failure_rolls_back_company_and_marks_run_failed(
     monkeypatch.setattr(repository, "insert_qualification_result", boom)
 
     with pytest.raises(psycopg.IntegrityError):
-        process_company(conn, "openai.com", lambda d: apollo_payload)
+        enrich_score_qualify(conn, "openai.com", lambda d: apollo_payload)
 
     assert count(conn, "companies") == 0  # real rollback
     assert conn.execute(
@@ -77,7 +77,7 @@ def test_stale_runs_are_failed(conn):
 
 def test_invalid_domain_creates_no_run(conn):
     with pytest.raises(ValueError):
-        process_company(conn, "not a domain", lambda d: {})
+        enrich_score_qualify(conn, "not a domain", lambda d: {})
     assert count(conn, "enrichment_runs") == 0
 
 
@@ -94,9 +94,9 @@ def test_recently_enriched_domains_are_returned(conn, apollo_payload):
     def fail(domain):
         raise ApolloAPIError("down")
 
-    process_company(conn, "openai.com", lambda d: apollo_payload)
+    enrich_score_qualify(conn, "openai.com", lambda d: apollo_payload)
     with pytest.raises(ApolloAPIError):
-        process_company(conn, "stripe.com", fail)
+        enrich_score_qualify(conn, "stripe.com", fail)
 
     recent = repository.get_recently_enriched(
         conn, ["openai.com", "stripe.com", "nike.com"]

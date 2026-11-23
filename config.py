@@ -25,7 +25,7 @@ class Settings:
 
         abstract_api_key = os.getenv("ABSTRACT_API_KEY")
         apollo_api_key = os.getenv("APOLLO_API_KEY")
-
+        
         if not abstract_api_key:
             raise ValueError(
             "ABSTRACT_API_KEY is not configured."

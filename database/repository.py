@@ -158,10 +158,23 @@ def fail_stale_runs(conn, minutes: int = 15) -> int:
 
 
 def get_recently_enriched(conn, domains: list[str], days: int = 30) -> set[str]:
-    rows = conn.execute("""
+    rows = conn.execute(
+        """
         SELECT DISTINCT requested_domain FROM enrichment_runs
         WHERE status = 'succeeded'
             AND requested_domain = ANY(%s)
             AND finished_at > NOW() - make_interval(days => %s)
-        """, (domains, days)).fetchall()
+        """,
+        (domains, days),
+    ).fetchall()
     return {row[0] for row in rows}
+
+
+def get_company_icp_score(conn, domain: str) -> int | None:
+    row = conn.execute(queries.GET_COMPANY_ICP_SCORE, (domain,)).fetchone()
+    return row[0] if row else None
+
+
+def get_company_qualification_result(conn, domain: str) -> bool | None:
+    row = conn.execute(queries.GET_COMPANY_QUALIFICATION_RESULT, (domain,)).fetchone()
+    return row[0] if row else None

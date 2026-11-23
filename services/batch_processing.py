@@ -1,9 +1,18 @@
 import pandas as pd
+import psycopg
 
 from config import Settings
 from datetime import datetime
 from services.domains import normalize_domain
 from database import repository
+from clients.apollo_api import ApolloAPIError
+from services.company_processing import enrich_score_qualify
+from services.persistence import save_output_files
+
+# Provider errors that suggest apollo is strugging (not this one domain)
+TRANSIENT_PROVIDER_CODES = {"rate_limited", "server_error", "timeout", "connection"}
+MAX_CONSECUTIVE_PROVIDER_FAILURES = 5
+DEFAULT_MAX_CALLS = 100
 
 
 class BatchProcessingError(Exception):
@@ -141,3 +150,61 @@ def output_summary(results: list[dict]) -> None:
     print(f"Failures: {fail_rows}")
     print(f"Skipped: {skipped_rows}")
     print(f"Successfully enriched: {success_rows}")
+
+
+def enrich_batch(conn, batch, fetch_company, output_dir, max_calls) -> list[dict]:
+    # Process every entry whose status is still None. Stop early on spend cap or struggling provider/DB
+    calls = 0
+    consecutive = 0
+    stop_reason = None
+
+    for entry in batch:
+
+        if entry["status"] is not None:  # already fail or skipped
+            continue
+
+        if calls >= max_calls:
+            stop_reason = "max_calls_reached"
+            break
+        calls += 1
+
+        try:  # Enrich
+            company, icp_score = enrich_score_qualify(
+                conn, entry["domain"], fetch_company
+            )
+
+        except ApolloAPIError as exc:
+            entry.update(status="FAIL", error_type=exc.code)
+            if exc.code == "auth":  # every following call would fail also
+                stop_reason = "batch_stopped_auth_error"
+                break
+
+            consecutive = consecutive + 1 if exc.code in TRANSIENT_PROVIDER_CODES else 0
+
+            if consecutive >= MAX_CONSECUTIVE_PROVIDER_FAILURES:  # circuit breaker
+                stop_reason = "batch_stopped_transient_provider_error"
+                break
+            continue
+
+        except psycopg.OperationalError:
+            entry.update(status="FAIL", error_type="database_unavailable")
+            stop_reason = "batch_stopped_db_unavailable"
+            break
+
+        except Exception as exc:
+            entry.update(status="FAIL", error_type=type(exc).__name__)
+            continue
+
+        consecutive = 0
+        entry.update(
+            status="SUCCESS",
+            icp_score=icp_score.score,
+            qualification=icp_score.is_qualified,
+        )
+        save_output_files(company, icp_score, output_dir)
+
+    for entry in batch:
+        if entry["status"] is None:
+            entry.update(status="SKIPPED", error_type=stop_reason)
+
+    return batch

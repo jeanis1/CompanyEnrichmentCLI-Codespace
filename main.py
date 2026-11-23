@@ -4,9 +4,10 @@ from functools import partial
 
 import psycopg
 
-from clients.apollo_api import ApolloAPIError, get_company_by_domain_apollo
+from clients.apollo_api import ApolloAPIError, request_company_by_domain_apollo
 from config import Settings
 from database import repository
+from fastapi import Depends
 from database.database import get_connection
 from services.batch_processing import (
     BatchProcessingError,
@@ -17,9 +18,10 @@ from services.batch_processing import (
     remove_input_duplication,
     save_batch_summary,
     validate_input,
+    enrich_batch,
 )
-from services.company_enrichment import CompanyEnrichmentError, enrich_company_apollo
-from services.company_processing import process_company
+from services.company_enrichment import CompanyEnrichmentError
+from services.company_processing import enrich_score_qualify
 from services.persistence import save_output_files
 from pydantic import ValidationError
 
@@ -28,6 +30,15 @@ TRANSIENT_PROVIDER_CODES = {"rate_limited", "server_error", "timeout", "connecti
 MAX_CONSECUTIVE_PROVIDER_FAILURES = 5
 DEFAULT_MAX_CALLS = 100
 
+settings = Settings.from_env()
+
+
+def get_db():
+    conn = get_connection(settings.database_url)
+    try:
+        yield conn
+    finally:
+        conn.close()
 
 
 def parse_args():
@@ -92,81 +103,35 @@ def parse_args():
 
 def process_single_domain(conn, domain: str, settings: Settings) -> int:
     fetch_company = partial(
-        get_company_by_domain_apollo,
+        request_company_by_domain_apollo,
         api_key=settings.apollo_api_key,
     )
+
     try:
-        company, icp_score = process_company(conn, domain, fetch_company)
+        company, icp_score = enrich_score_qualify(conn, domain, fetch_company)
+
     except (ApolloAPIError, CompanyEnrichmentError) as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 1
+
     except ValidationError:
         # checked before ValueError(parent) as message can contain provider data
         print("Error: Provider returned invalid company data.", file=sys.stderr)
         return 1
+
     except ValueError as exc:  # Invalid data
         print(f"Error: {exc}", file=sys.stderr)
         return 1
+
     except psycopg.Error as exc:
         print(
             f"Database persistence failed: {type(exc).__name__}",
             file=sys.stderr,
         )
         return 1
+
     save_output_files(company, icp_score, settings.output_dir)
     return 0
-
-
-def enrich_batch(conn, batch, fetch_company, output_dir, max_calls) -> list[dict]:
-    # Process every entry whose status is still None. Stop early on spend cap OR struggling provider/DB
-    calls = 0
-    consecutive = 0
-    stop_reason = None
-
-    for entry in batch:
-        if entry["status"] is not None:  # already fail or skipped
-            continue
-
-        if calls >= max_calls:
-            stop_reason = "max_calls_reached"
-            break
-        calls += 1
-
-        try:
-            company, icp_score = process_company(conn, entry["domain"], fetch_company)
-        except ApolloAPIError as exc:
-            entry.update(status="FAIL", error_type=exc.code)
-            if exc.code == "auth":  # every following call would fail also
-                stop_reason = "batch_stopped_auth_error"
-                break
-            consecutive = consecutive + 1 if exc.code in TRANSIENT_PROVIDER_CODES else 0
-            if consecutive >= MAX_CONSECUTIVE_PROVIDER_FAILURES:  # circuit breaker
-                stop_reason = "batch_stopped_transient_provider_error"
-                break
-            continue
-        except psycopg.OperationalError:
-            entry.update(status="FAIL", error_type="database_unavailable")
-            stop_reason = "batch_stopped_db_unavailable"
-            break
-        except Exception as exc:
-            entry.update(status="FAIL", error_type=type(exc).__name__)
-            continue
-
-        consecutive = 0
-        entry.update(
-            status="SUCCESS",
-            icp_score=icp_score.score,
-            qualification=icp_score.is_qualified,
-        )
-        # Files are written after the run has commited.
-        save_output_files(company, icp_score, output_dir)
-
-    # Rows not reached after an early stop
-    for entry in batch:
-        if entry["status"] is None:
-            entry.update(status="SKIPPED", error_type=stop_reason)
-
-    return batch
 
 
 def process_batch(
@@ -187,12 +152,11 @@ def process_batch(
         return
 
     batch = skip_recently_enriched(conn, batch)
-    
+
     fetch_company = partial(
-        get_company_by_domain_apollo,
+        request_company_by_domain_apollo,
         api_key=settings.apollo_api_key,
     )
-
     batch = enrich_batch(conn, batch, fetch_company, settings.output_dir, max_calls)
 
     batch = order_and_rank_batch(batch)
@@ -208,9 +172,9 @@ def main() -> int:
 
     with get_connection(settings.database_url) as conn:
         if args.csv or args.domain:
-            repository.fail_stale_runs(
+            repository.fail_stale_runs(  # Close runs left 'running' in DB by previous crash
                 conn
-            )  # Close out runs left 'running' in DB by previous crash
+            )
 
         if args.csv:
             return process_batch(conn, args.csv, settings, args.max_calls)
@@ -267,5 +231,3 @@ def main() -> int:
 # Entry-point validation
 if __name__ == "__main__":
     raise SystemExit(main())
-
-

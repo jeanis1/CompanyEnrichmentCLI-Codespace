@@ -83,5 +83,25 @@ SELECT id, requested_domain, started_at
 FROM enrichment_runs
 WHERE status = 'running'
     AND started_at < NOW() - (%s * INTERVAL '1 minute')
-oRDER BY started_at;
+ORDER BY started_at;
+"""
+
+GET_COMPANY_ICP_SCORE = """
+SELECT q.icp_score 
+FROM qualification_results q  
+JOIN companies c 
+    on c.id = q.company_id
+WHERE c.domain = %s
+ORDER BY q.id DESC  -- Most recent score only. 
+LIMIT 1
+"""
+
+GET_COMPANY_QUALIFICATION_RESULT = """
+SELECT q.is_qualified
+FROM qualification_results q 
+JOIN companies c
+    on c.id = q.company_id
+WHERE c.domain = %s
+ORDER BY q.id DESC
+LIMIT 1 
 """

@@ -10,20 +10,22 @@ from services.company_enrichment import (
     enrich_company_apollo,
 )
 from services.persistence import persist_company_result
-from services.scoring_icp import score_company
+from services.scoring_icp import score_and_qualify_company
 from services.domains import normalize_domain
 
 logger = logging.getLogger(__name__)
 
 
-def process_company(conn, domain, fetch_company):
+def enrich_score_qualify(conn, domain, fetch_company):
     domain = normalize_domain(
         domain
     )  # ValueError for invalid input then no run created
-    run_id = repository.start_enrichment_run(conn, domain)
+    run_id = repository.start_enrichment_run(
+        conn, domain
+    )  # end = complete_enrichment_run, called in persist_company_result
     try:
         company = enrich_company_apollo(domain, fetch_company)
-        icp_score = score_company(company)
+        icp_score = score_and_qualify_company(company)
         persist_company_result(conn, run_id, company, icp_score)  # one transaction
     except Exception as exc:
         _record_failure(conn, run_id, exc)
